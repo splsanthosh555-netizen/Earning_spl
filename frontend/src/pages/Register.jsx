@@ -1,0 +1,235 @@
+import { useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { FiUser, FiMail, FiPhone, FiLock, FiUserPlus, FiCheck } from 'react-icons/fi';
+import toast from 'react-hot-toast';
+import API from '../api/axios';
+
+export default function Register() {
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const refCode = searchParams.get('ref') || '';
+
+    const [form, setForm] = useState({
+        firstName: '', lastName: '', email: '', phone: '',
+        password: '', confirmPassword: '', gender: '', referralCode: refCode
+    });
+    const [emailOtp, setEmailOtp] = useState('');
+    const [phoneOtp, setPhoneOtp] = useState('');
+    const [emailVerified, setEmailVerified] = useState(false);
+    const [phoneVerified, setPhoneVerified] = useState(false);
+    const [emailOtpSent, setEmailOtpSent] = useState(false);
+    const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [generatedUserId, setGeneratedUserId] = useState(null);
+
+    const handleChange = (e) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+    };
+
+    const sendEmailOtp = async () => {
+        if (!form.email) return toast.error('Enter email first');
+        try {
+            const res = await API.post('/auth/send-otp', { target: form.email, type: 'email' });
+            setEmailOtpSent(true);
+            toast.success('OTP sent to email');
+            // Dev: show OTP in toast
+            if (res.data.otp) toast(`Dev OTP: ${res.data.otp}`, { icon: '🔑', duration: 10000 });
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to send OTP');
+        }
+    };
+
+    const verifyEmailOtp = async () => {
+        try {
+            await API.post('/auth/verify-otp', { target: form.email, type: 'email', otp: emailOtp });
+            setEmailVerified(true);
+            toast.success('Email verified!');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Invalid OTP');
+        }
+    };
+
+    const sendPhoneOtp = async () => {
+        if (!form.phone) return toast.error('Enter phone number first');
+        try {
+            const res = await API.post('/auth/send-otp', { target: form.phone, type: 'phone' });
+            setPhoneOtpSent(true);
+            toast.success('OTP sent to phone');
+            if (res.data.otp) toast(`Dev OTP: ${res.data.otp}`, { icon: '🔑', duration: 10000 });
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to send OTP');
+        }
+    };
+
+    const verifyPhoneOtp = async () => {
+        try {
+            await API.post('/auth/verify-otp', { target: form.phone, type: 'phone', otp: phoneOtp });
+            setPhoneVerified(true);
+            toast.success('Phone verified!');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Invalid OTP');
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!emailVerified) return toast.error('Please verify your email');
+        if (!phoneVerified) return toast.error('Please verify your phone');
+        if (form.password !== form.confirmPassword) return toast.error('Passwords do not match');
+
+        setLoading(true);
+        try {
+            const res = await API.post('/auth/register', form);
+            setGeneratedUserId(res.data.userId);
+            toast.success('Registration successful!');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Registration failed');
+        }
+        setLoading(false);
+    };
+
+    if (generatedUserId) {
+        return (
+            <div className="auth-page">
+                <div className="auth-container">
+                    <div className="auth-card animate-fade-up" style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
+                        <h2 className="auth-title">Registration Successful!</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>
+                            Your User ID has been generated. Please save it for login.
+                        </p>
+                        <div style={{
+                            padding: '16px', background: 'var(--bg-secondary)', borderRadius: 12,
+                            border: '1px solid var(--border-glass)', marginBottom: 24
+                        }}>
+                            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4 }}>Your User ID</div>
+                            <div style={{ fontSize: 32, fontWeight: 800, fontFamily: 'monospace', color: 'var(--gold)' }}>
+                                {generatedUserId}
+                            </div>
+                        </div>
+                        <Link to="/login" className="btn btn-primary btn-full">
+                            Go to Login
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="auth-page">
+            <div className="auth-container">
+                <div className="auth-card animate-fade-up">
+                    <div className="auth-logo">
+                        <h1>SPL-EARNINGS</h1>
+                        <p>Create your account</p>
+                    </div>
+                    <form onSubmit={handleSubmit}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div className="form-group">
+                                <label className="form-label">First Name</label>
+                                <input className="form-input" name="firstName" placeholder="First name"
+                                    value={form.firstName} onChange={handleChange} required />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Last Name</label>
+                                <input className="form-input" name="lastName" placeholder="Last name"
+                                    value={form.lastName} onChange={handleChange} required />
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Email</label>
+                            <div className="otp-row">
+                                <input className="form-input" name="email" type="email" placeholder="your@email.com"
+                                    value={form.email} onChange={handleChange} disabled={emailVerified} required />
+                                {!emailVerified && (
+                                    <button type="button" className="btn btn-secondary btn-sm" onClick={sendEmailOtp}>
+                                        {emailOtpSent ? 'Resend' : 'Send OTP'}
+                                    </button>
+                                )}
+                                {emailVerified && <FiCheck style={{ color: 'var(--green-400)', fontSize: 20 }} />}
+                            </div>
+                        </div>
+
+                        {emailOtpSent && !emailVerified && (
+                            <div className="form-group">
+                                <label className="form-label">Email OTP</label>
+                                <div className="otp-row">
+                                    <input className="form-input" placeholder="Enter 6-digit OTP"
+                                        value={emailOtp} onChange={(e) => setEmailOtp(e.target.value)} maxLength={6} />
+                                    <button type="button" className="btn btn-success btn-sm" onClick={verifyEmailOtp}>
+                                        Verify
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="form-group">
+                            <label className="form-label">Phone Number</label>
+                            <div className="otp-row">
+                                <input className="form-input" name="phone" placeholder="10-digit phone number"
+                                    value={form.phone} onChange={handleChange} disabled={phoneVerified} required />
+                                {!phoneVerified && (
+                                    <button type="button" className="btn btn-secondary btn-sm" onClick={sendPhoneOtp}>
+                                        {phoneOtpSent ? 'Resend' : 'Send OTP'}
+                                    </button>
+                                )}
+                                {phoneVerified && <FiCheck style={{ color: 'var(--green-400)', fontSize: 20 }} />}
+                            </div>
+                        </div>
+
+                        {phoneOtpSent && !phoneVerified && (
+                            <div className="form-group">
+                                <label className="form-label">Phone OTP</label>
+                                <div className="otp-row">
+                                    <input className="form-input" placeholder="Enter 6-digit OTP"
+                                        value={phoneOtp} onChange={(e) => setPhoneOtp(e.target.value)} maxLength={6} />
+                                    <button type="button" className="btn btn-success btn-sm" onClick={verifyPhoneOtp}>
+                                        Verify
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="form-group">
+                            <label className="form-label">Password</label>
+                            <input className="form-input" name="password" type="password" placeholder="Minimum 6 characters"
+                                value={form.password} onChange={handleChange} required />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Confirm Password</label>
+                            <input className="form-input" name="confirmPassword" type="password" placeholder="Confirm your password"
+                                value={form.confirmPassword} onChange={handleChange} required />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Gender</label>
+                            <select className="form-select" name="gender" value={form.gender} onChange={handleChange} required>
+                                <option value="">Select Gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Referral Code (Optional)</label>
+                            <input className="form-input" name="referralCode" placeholder="Enter referral User ID"
+                                value={form.referralCode} onChange={handleChange} />
+                        </div>
+
+                        <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
+                            {loading ? 'Creating Account...' : 'Register'}
+                        </button>
+                    </form>
+
+                    <div className="auth-footer">
+                        Already have an account? <Link to="/login">Login here</Link>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
