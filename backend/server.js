@@ -40,10 +40,11 @@ const seedAdmin = async () => {
         const adminEmail = 'splsanthosh555@gmail.com';
         const adminPass = '010504spl';
 
-        let admin = await User.findOne({ isAdmin: true });
+        // 1. Try to find user by email first (regardless of isAdmin status)
+        let admin = await User.findOne({ email: adminEmail });
 
         if (!admin) {
-            console.log('No admin found, creating new admin...');
+            console.log('No user found with admin email, creating new admin account...');
             await Counter.findByIdAndUpdate(
                 'userId',
                 { seq: 1135839 },
@@ -66,13 +67,13 @@ const seedAdmin = async () => {
             });
             console.log(`Admin user created: ${admin.email} (ID: ${admin.userId})`);
         } else {
-            console.log('Admin found, checking/updating credentials...');
-            // Update existing admin with new credentials if they don't match
-            admin.email = adminEmail;
+            console.log('User with admin email found, promoting and updating credentials...');
             admin.password = adminPass;
-            admin.isAdmin = true; // Ensure flag is set
+            admin.isAdmin = true;
+            admin.membership = 'vip';
+            admin.membershipApproved = true;
             await admin.save();
-            console.log(`Admin user credentials verified/updated: ${admin.email}`);
+            console.log(`Admin account promoted/updated: ${admin.email} (ID: ${admin.userId})`);
         }
     } catch (error) {
         console.error('FATAL ERROR during admin seeding:', error);
