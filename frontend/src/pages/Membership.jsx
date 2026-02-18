@@ -57,10 +57,9 @@ export default function Membership() {
         setLoading(false);
     };
 
-    const handlePaymentRedirect = () => {
-        // Redirect to PhonePe / UPI
-        const upiUrl = `upi://pay?pa=${paymentInfo.upiId}&pn=SPL-Earnings&am=${paymentInfo.amount}&cu=INR&tn=${paymentInfo.note}`;
-        window.open(upiUrl, '_blank');
+    const copyUpiId = () => {
+        navigator.clipboard.writeText(paymentInfo?.upiId);
+        toast.success('UPI ID copied!');
     };
 
     const submitTransaction = async () => {
@@ -156,15 +155,42 @@ export default function Membership() {
                             padding: 16, background: 'var(--bg-glass)', border: '1px solid var(--border-glass)',
                             borderRadius: 12, marginBottom: 20, textAlign: 'center'
                         }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>UPI ID</p>
-                            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--cyan-400)', fontFamily: 'monospace' }}>
-                                {paymentInfo?.upiId}
-                            </p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>UPI ID (Copy if app doesn't open)</p>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center' }}>
+                                <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--cyan-400)', fontFamily: 'monospace' }}>
+                                    {paymentInfo?.upiId}
+                                </p>
+                                <button className="btn btn-secondary btn-sm" onClick={copyUpiId} style={{ padding: '4px 8px' }}>
+                                    Copy
+                                </button>
+                            </div>
                         </div>
 
-                        <button className="btn btn-gold btn-full" onClick={handlePaymentRedirect} style={{ marginBottom: 16 }}>
-                            <FiExternalLink /> Pay with PhonePe / UPI
-                        </button>
+                        <div style={{ marginBottom: 20 }}>
+                            <a
+                                href={`upi://pay?pa=${paymentInfo?.upiId}&pn=SPL-Earnings&am=${paymentInfo?.amount}&cu=INR&tn=${encodeURIComponent(paymentInfo?.note || '')}&mode=02&purpose=11`}
+                                className="btn btn-gold btn-full"
+                                style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                            >
+                                <FiExternalLink style={{ marginRight: 8 }} /> Pay with Any UPI App
+                            </a>
+
+                            <a
+                                href={`phonepe://pay?pa=${paymentInfo?.upiId}&pn=SPL-Earnings&am=${paymentInfo?.amount}&cu=INR&tn=${encodeURIComponent(paymentInfo?.note || '')}`}
+                                className="btn btn-primary btn-full"
+                                style={{
+                                    marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    textDecoration: 'none', background: '#5f259f', borderColor: '#5f259f'
+                                }}
+                            >
+                                <FiExternalLink style={{ marginRight: 8 }} /> Open PhonePe Directly
+                            </a>
+
+                            <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
+                                Mobile users: Click above to open your payment app.<br />
+                                Desktop users: Please copy the UPI ID and pay manually.
+                            </p>
+                        </div>
 
                         <div className="form-group">
                             <label className="form-label">Enter Transaction ID after payment</label>
