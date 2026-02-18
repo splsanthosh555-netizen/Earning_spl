@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiLock, FiShield, FiArrowLeft } from 'react-icons/fi';
+import { FiLock, FiShield, FiArrowLeft, FiEye, FiEyeOff } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
@@ -80,14 +80,25 @@ export default function AdminLogin() {
                             <div style={{ position: 'relative' }}>
                                 <input
                                     className="form-input"
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    style={{ paddingLeft: 40 }}
+                                    style={{ paddingLeft: 40, paddingRight: 40 }}
                                 />
                                 <FiShield style={{ position: 'absolute', left: 14, top: 14, color: 'var(--text-muted)' }} />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{
+                                        position: 'absolute', right: 10, top: 12,
+                                        background: 'none', border: 'none', color: 'var(--text-muted)',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                </button>
                             </div>
                         </div>
 

@@ -160,7 +160,7 @@ router.post('/login', async (req, res) => {
 
         const isMatch = await user.matchPassword(password);
         if (!isMatch) {
-            console.log(`Login failed: Password mismatch for [${userId}]`);
+            console.log(`[DEBUG] Password mismatch for: ${user.email}. Entered length: ${password.length}, DB hash length: ${user.password.length}`);
             return res.status(401).json({ message: 'Password does not match' });
         }
 
