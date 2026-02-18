@@ -155,9 +155,20 @@ export default function Membership() {
                             padding: 16, background: 'var(--bg-glass)', border: '1px solid var(--border-glass)',
                             borderRadius: 12, marginBottom: 20, textAlign: 'center'
                         }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>UPI ID (Copy if app doesn't open)</p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 12 }}>Scan QR to Pay</p>
+                            <div style={{
+                                background: 'white', padding: 10, borderRadius: 12, display: 'inline-block',
+                                marginBottom: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                            }}>
+                                <img
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`upi://pay?pa=${paymentInfo?.upiId}&pn=A+Santosh&am=${paymentInfo?.amount}&cu=INR&tn=${paymentInfo?.note}`)}`}
+                                    alt="UPI QR Code"
+                                    style={{ display: 'block' }}
+                                />
+                            </div>
+
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center' }}>
-                                <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--cyan-400)', fontFamily: 'monospace' }}>
+                                <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--cyan-400)', fontFamily: 'monospace' }}>
                                     {paymentInfo?.upiId}
                                 </p>
                                 <button className="btn btn-secondary btn-sm" onClick={copyUpiId} style={{ padding: '4px 8px' }}>
@@ -168,7 +179,7 @@ export default function Membership() {
 
                         <div style={{ marginBottom: 20 }}>
                             <a
-                                href={`upi://pay?pa=${paymentInfo?.upiId}&pn=A+Santosh&am=${paymentInfo?.amount}&cu=INR&tn=${encodeURIComponent(paymentInfo?.note || '')}&mode=02&purpose=11`}
+                                href={`upi://pay?pa=${paymentInfo?.upiId}&pn=A+Santosh&am=${paymentInfo?.amount}&cu=INR&tn=${encodeURIComponent(paymentInfo?.note || '')}`}
                                 className="btn btn-gold btn-full"
                                 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
                             >
@@ -187,8 +198,8 @@ export default function Membership() {
                             </a>
 
                             <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
-                                Mobile users: Click above to open your payment app.<br />
-                                Desktop users: Please copy the UPI ID and pay manually.
+                                Mobile users: Click above or scan QR.<br />
+                                Desktop users: Scan the QR code with your phone.
                             </p>
                         </div>
 

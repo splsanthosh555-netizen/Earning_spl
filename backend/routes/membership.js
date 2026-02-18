@@ -62,7 +62,7 @@ router.post('/buy', protect, async (req, res) => {
             paymentInfo: {
                 upiId: '9502643906-2@axl',
                 amount: cost,
-                note: `A Santosh ${membershipType} membership - User ${user.userId}`
+                note: `M-${membershipType}-${user.userId}`
             }
         });
     } catch (error) {
