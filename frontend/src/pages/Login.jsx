@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
@@ -41,8 +42,29 @@ export default function Login() {
                         </div>
                         <div className="form-group">
                             <label className="form-label">Password</label>
-                            <input className="form-input" type="password" placeholder="Enter your password" id="login-password"
-                                value={password} onChange={(e) => setPassword(e.target.value)} required />
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    className="form-input"
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Enter your password"
+                                    id="login-password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    style={{ paddingRight: 40 }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{
+                                        position: 'absolute', right: 10, top: 10,
+                                        background: 'none', border: 'none', color: 'var(--text-muted)',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                </button>
+                            </div>
                         </div>
                         <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading} id="login-submit">
                             {loading ? 'Logging in...' : 'Login'}
