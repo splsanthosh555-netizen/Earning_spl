@@ -75,7 +75,10 @@ html {
 
 body {
   font-family: var(--font-primary);
-  background: var(--bg-primary);
+  background: linear-gradient(rgba(10, 14, 26, 0.85), rgba(10, 14, 26, 0.85)), url('/assets/dashboard-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
