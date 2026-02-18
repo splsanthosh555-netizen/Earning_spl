@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema({
     isAdmin: { type: Boolean, default: false },
     directReferralCount: { type: Number, default: 0 },
     indirectReferralCount: { type: Number, default: 0 },
+    hasReceivedDirectBonus: { type: Boolean, default: false }, // One-time 2% bonus tracking
     createdAt: { type: Date, default: Date.now }
 });
 

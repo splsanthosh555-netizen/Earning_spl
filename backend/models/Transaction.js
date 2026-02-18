@@ -12,7 +12,8 @@ const transactionSchema = new mongoose.Schema({
             'admin_fee',
             'withdrawal',
             'upgrade',
-            'inactive_transfer'
+            'inactive_transfer',
+            'direct_bonus'
         ],
         required: true
     },
