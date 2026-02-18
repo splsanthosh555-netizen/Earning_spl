@@ -133,7 +133,12 @@ router.post('/register', async (req, res) => {
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
     try {
-        const { userId, password } = req.body;
+        const rawUserId = req.body.userId || '';
+        const rawPassword = req.body.password || '';
+
+        const userId = rawUserId.trim();
+        const password = rawPassword.trim();
+
         if (!userId || !password) {
             return res.status(400).json({ message: 'User ID and password are required' });
         }
@@ -147,11 +152,15 @@ router.post('/login', async (req, res) => {
 
         const user = await User.findOne(query);
         if (!user) {
+            console.log(`Login failed: User not found [${userId}]`);
             return res.status(401).json({ message: 'User not found in system' });
         }
 
+        console.log(`Login attempt for: ${user.email} (ID: ${user.userId}, isAdmin: ${user.isAdmin})`);
+
         const isMatch = await user.matchPassword(password);
         if (!isMatch) {
+            console.log(`Login failed: Password mismatch for [${userId}]`);
             return res.status(401).json({ message: 'Password does not match' });
         }
 
