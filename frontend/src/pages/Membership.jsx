@@ -9,27 +9,27 @@ const memberships = [
     {
         type: 'bronze', name: 'Bronze', cost: 50,
         gradient: 'var(--gradient-bronze)',
-        features: ['20% referral income', '1% indirect referral amount', '10% admin fees']
+        features: ['20% of Referrer Pool', 'Active Member Community Share', '20% Admin Fee on income']
     },
     {
         type: 'silver', name: 'Silver', cost: 100,
         gradient: 'var(--gradient-silver)',
-        features: ['30% referral income', '2% indirect referral amount', '10% admin fee', 'Easy to withdraw']
+        features: ['30% of Referrer Pool', 'Active Member Community Share', '20% Admin Fee on income']
     },
     {
         type: 'gold', name: 'Gold', cost: 200,
         gradient: 'var(--gradient-gold)',
-        features: ['40% referral income', '2% indirect referral amount', '10% admin fee', 'Easy to withdraw', 'No approvals']
+        features: ['35% of Referrer Pool', 'Active Member Community Share', '20% Admin Fee on income']
     },
     {
         type: 'diamond', name: 'Diamond', cost: 350,
         gradient: 'var(--gradient-diamond)',
-        features: ['40% referral income', '10% indirect referral amount', 'No admin fee', 'Easy to withdraw', 'No approvals']
+        features: ['40% of Referrer Pool', 'Active Member Community Share', 'No Admin Fees', 'Admin Approval Required']
     },
     {
         type: 'platinum', name: 'Platinum', cost: 500,
         gradient: 'var(--gradient-platinum)',
-        features: ['40% referral income', '15% indirect referral amount', 'No admin fee', 'Easy to withdraw', 'No approvals']
+        features: ['40% of Referrer Pool', 'Active Member Community Share', 'No Admin Fees', 'Admin Approval Required']
     }
 ];
 
