@@ -168,7 +168,7 @@ export default function Membership() {
 
                         <div style={{ marginBottom: 20 }}>
                             <a
-                                href={`upi://pay?pa=${paymentInfo?.upiId}&pn=SPL-Earnings&am=${paymentInfo?.amount}&cu=INR&tn=${encodeURIComponent(paymentInfo?.note || '')}&mode=02&purpose=11`}
+                                href={`upi://pay?pa=${paymentInfo?.upiId}&pn=A+Santosh&am=${paymentInfo?.amount}&cu=INR&tn=${encodeURIComponent(paymentInfo?.note || '')}&mode=02&purpose=11`}
                                 className="btn btn-gold btn-full"
                                 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
                             >
@@ -176,7 +176,7 @@ export default function Membership() {
                             </a>
 
                             <a
-                                href={`phonepe://pay?pa=${paymentInfo?.upiId}&pn=SPL-Earnings&am=${paymentInfo?.amount}&cu=INR&tn=${encodeURIComponent(paymentInfo?.note || '')}`}
+                                href={`phonepe://pay?pa=${paymentInfo?.upiId}&pn=A+Santosh&am=${paymentInfo?.amount}&cu=INR&tn=${encodeURIComponent(paymentInfo?.note || '')}`}
                                 className="btn btn-primary btn-full"
                                 style={{
                                     marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',

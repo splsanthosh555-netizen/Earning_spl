@@ -60,9 +60,9 @@ router.post('/buy', protect, async (req, res) => {
             cost,
             isUpgrade,
             paymentInfo: {
-                upiId: 'splsanthosh28@ybl',
+                upiId: '9502643906-2@axl',
                 amount: cost,
-                note: `SPL-Earnings ${membershipType} membership - User ${user.userId}`
+                note: `A Santosh ${membershipType} membership - User ${user.userId}`
             }
         });
     } catch (error) {
