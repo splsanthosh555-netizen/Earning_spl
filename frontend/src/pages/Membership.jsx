@@ -161,7 +161,7 @@ export default function Membership() {
                                 marginBottom: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                             }}>
                                 <img
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`upi://pay?pa=${paymentInfo?.upiId}&pn=A+Santosh&am=${paymentInfo?.amount}&cu=INR&tn=${paymentInfo?.note}`)}`}
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`upi://pay?pa=${paymentInfo?.upiId}&am=${paymentInfo?.amount}&cu=INR`)}`}
                                     alt="UPI QR Code"
                                     style={{ display: 'block' }}
                                 />
@@ -179,7 +179,7 @@ export default function Membership() {
 
                         <div style={{ marginBottom: 20 }}>
                             <a
-                                href={`upi://pay?pa=${paymentInfo?.upiId}&pn=A+Santosh&am=${paymentInfo?.amount}&cu=INR&tn=${encodeURIComponent(paymentInfo?.note || '')}`}
+                                href={`upi://pay?pa=${paymentInfo?.upiId}&am=${paymentInfo?.amount}&cu=INR`}
                                 className="btn btn-gold btn-full"
                                 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
                             >
@@ -187,7 +187,7 @@ export default function Membership() {
                             </a>
 
                             <a
-                                href={`phonepe://pay?pa=${paymentInfo?.upiId}&pn=A+Santosh&am=${paymentInfo?.amount}&cu=INR&tn=${encodeURIComponent(paymentInfo?.note || '')}`}
+                                href={`phonepe://pay?pa=${paymentInfo?.upiId}&am=${paymentInfo?.amount}&cu=INR`}
                                 className="btn btn-primary btn-full"
                                 style={{
                                     marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
