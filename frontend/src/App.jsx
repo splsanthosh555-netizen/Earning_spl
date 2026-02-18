@@ -14,6 +14,7 @@ import TermsConditions from './pages/TermsConditions';
 import Membership from './pages/Membership';
 import Earnings from './pages/Earnings';
 import AdminPanel from './pages/AdminPanel';
+import AdminLogin from './pages/AdminLogin';
 
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth();
@@ -52,6 +53,7 @@ function AppRoutes() {
             <Route path="/terms" element={<ProtectedRoute><TermsConditions /></ProtectedRoute>} />
             <Route path="/membership" element={<ProtectedRoute><Membership /></ProtectedRoute>} />
             <Route path="/earnings" element={<ProtectedRoute><Earnings /></ProtectedRoute>} />
+            <Route path="/admin-login" element={<PublicRoute><AdminLogin /></PublicRoute>} />
             <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
             <Route path="*" element={<Navigate to="/" />} />
         </Routes>
