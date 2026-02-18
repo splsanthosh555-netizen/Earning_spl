@@ -61,7 +61,9 @@
 /* ============================================
    RESET & BASE
    ============================================ */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -87,7 +89,7 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background: 
+  background:
     radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.08) 0%, transparent 50%),
     radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 50%),
     radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.03) 0%, transparent 50%);
@@ -106,6 +108,7 @@ a {
   text-decoration: none;
   transition: color 0.2s;
 }
+
 a:hover {
   color: var(--purple-400);
 }
@@ -137,6 +140,7 @@ a:hover {
   padding: 24px;
   transition: all 0.3s ease;
 }
+
 .glass-card:hover {
   background: var(--bg-glass-hover);
   border-color: var(--border-glass-active);
@@ -168,6 +172,7 @@ a:hover {
   color: white;
   box-shadow: var(--shadow-glow-purple);
 }
+
 .btn-primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 0 30px rgba(124, 58, 237, 0.5);
@@ -178,6 +183,7 @@ a:hover {
   color: var(--text-primary);
   border: 1px solid var(--border-glass);
 }
+
 .btn-secondary:hover {
   background: var(--bg-glass-hover);
   border-color: var(--purple-500);
@@ -187,6 +193,7 @@ a:hover {
   background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   color: white;
 }
+
 .btn-success:hover {
   transform: translateY(-2px);
   box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
@@ -196,6 +203,7 @@ a:hover {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
 }
+
 .btn-danger:hover {
   transform: translateY(-2px);
   box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
@@ -205,6 +213,7 @@ a:hover {
   background: var(--gradient-gold);
   color: #1a1a1a;
 }
+
 .btn-gold:hover {
   transform: translateY(-2px);
   box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
@@ -216,9 +225,19 @@ a:hover {
   transform: none !important;
 }
 
-.btn-sm { padding: 8px 16px; font-size: 13px; }
-.btn-lg { padding: 16px 32px; font-size: 16px; }
-.btn-full { width: 100%; }
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.btn-lg {
+  padding: 16px 32px;
+  font-size: 16px;
+}
+
+.btn-full {
+  width: 100%;
+}
 
 /* ============================================
    FORM ELEMENTS
@@ -247,10 +266,12 @@ a:hover {
   transition: all 0.3s ease;
   outline: none;
 }
+
 .form-input:focus {
   border-color: var(--purple-500);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
+
 .form-input::placeholder {
   color: var(--text-muted);
 }
@@ -267,6 +288,7 @@ a:hover {
   cursor: pointer;
   outline: none;
 }
+
 .form-select:focus {
   border-color: var(--purple-500);
 }
@@ -282,9 +304,11 @@ a:hover {
   gap: 8px;
   align-items: flex-end;
 }
+
 .otp-row .form-input {
   flex: 1;
 }
+
 .otp-row .btn {
   flex-shrink: 0;
 }
@@ -298,6 +322,10 @@ a:hover {
   align-items: center;
   justify-content: center;
   padding: 20px;
+  background-image: linear-gradient(rgba(10, 14, 26, 0.6), rgba(10, 14, 26, 0.6)), url('/assets/auth-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 
 .auth-container {
@@ -329,6 +357,7 @@ a:hover {
   background-clip: text;
   letter-spacing: -0.5px;
 }
+
 .auth-logo p {
   color: var(--text-secondary);
   font-size: 14px;
@@ -349,6 +378,7 @@ a:hover {
   font-size: 14px;
   color: var(--text-secondary);
 }
+
 .auth-footer a {
   font-weight: 600;
 }
@@ -394,6 +424,7 @@ a:hover {
   margin-bottom: 20px;
   animation: fadeInUp 0.6s ease 0.1s both;
 }
+
 .landing-title span {
   background: var(--gradient-primary);
   -webkit-background-clip: text;
@@ -421,9 +452,11 @@ a:hover {
   margin-top: 60px;
   animation: fadeInUp 0.6s ease 0.4s both;
 }
+
 .landing-stat {
   text-align: center;
 }
+
 .landing-stat-value {
   font-family: var(--font-display);
   font-size: 28px;
@@ -433,6 +466,7 @@ a:hover {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
 .landing-stat-label {
   font-size: 13px;
   color: var(--text-muted);
@@ -459,6 +493,7 @@ a:hover {
   display: flex;
   flex-direction: column;
 }
+
 .header-brand {
   font-family: var(--font-display);
   font-size: 20px;
@@ -468,13 +503,16 @@ a:hover {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
 .header-welcome {
   font-size: 13px;
   color: var(--text-secondary);
 }
+
 .header-welcome strong {
   color: var(--text-primary);
 }
+
 .header-userid {
   font-size: 12px;
   color: var(--text-muted);
@@ -499,6 +537,7 @@ a:hover {
   font-size: 14px;
   transition: all 0.3s;
 }
+
 .menu-toggle:hover {
   border-color: var(--purple-500);
 }
@@ -516,6 +555,7 @@ a:hover {
   animation: slideDown 0.2s ease;
   z-index: 200;
 }
+
 .menu-item {
   display: flex;
   align-items: center;
@@ -531,10 +571,12 @@ a:hover {
   text-align: left;
   font-family: var(--font-primary);
 }
+
 .menu-item:hover {
   background: var(--bg-glass-hover);
   color: var(--purple-400);
 }
+
 .menu-divider {
   height: 1px;
   background: var(--border-glass);
@@ -565,11 +607,13 @@ a:hover {
   transition: all 0.3s ease;
   cursor: pointer;
 }
+
 .stat-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-glow-purple);
   border-color: var(--border-glass-active);
 }
+
 .stat-card-label {
   font-size: 13px;
   color: var(--text-secondary);
@@ -577,23 +621,28 @@ a:hover {
   letter-spacing: 1px;
   margin-bottom: 8px;
 }
+
 .stat-card-value {
   font-family: var(--font-display);
   font-size: 28px;
   font-weight: 800;
 }
+
 .stat-card-value.purple {
   background: var(--gradient-purple);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
 .stat-card-value.cyan {
   color: var(--cyan-400);
 }
+
 .stat-card-value.gold {
   color: var(--gold);
 }
+
 .stat-card-value.green {
   color: var(--green-400);
 }
@@ -609,22 +658,26 @@ a:hover {
   padding: 24px;
   margin-bottom: 20px;
 }
+
 .referral-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
 }
+
 .referral-title {
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 700;
 }
+
 .referral-link-box {
   display: flex;
   gap: 8px;
   align-items: center;
 }
+
 .referral-link-input {
   flex: 1;
   padding: 10px 14px;
@@ -635,11 +688,13 @@ a:hover {
   font-size: 13px;
   font-family: monospace;
 }
+
 .referral-userid {
   font-size: 14px;
   color: var(--text-secondary);
   margin-bottom: 12px;
 }
+
 .referral-userid span {
   color: var(--gold);
   font-weight: 700;
@@ -664,6 +719,7 @@ a:hover {
   position: relative;
   overflow: hidden;
 }
+
 .membership-card::before {
   content: '';
   position: absolute;
@@ -672,21 +728,51 @@ a:hover {
   right: 0;
   height: 4px;
 }
+
 .membership-card:hover {
   transform: translateY(-6px);
   box-shadow: var(--shadow-lg);
 }
 
-.membership-card.bronze { background: linear-gradient(180deg, rgba(180, 83, 9, 0.15) 0%, var(--bg-glass) 50%); }
-.membership-card.bronze::before { background: var(--gradient-bronze); }
-.membership-card.silver { background: linear-gradient(180deg, rgba(107, 114, 128, 0.15) 0%, var(--bg-glass) 50%); }
-.membership-card.silver::before { background: var(--gradient-silver); }
-.membership-card.gold { background: linear-gradient(180deg, rgba(245, 158, 11, 0.15) 0%, var(--bg-glass) 50%); }
-.membership-card.gold::before { background: var(--gradient-gold); }
-.membership-card.diamond { background: linear-gradient(180deg, rgba(37, 99, 235, 0.15) 0%, var(--bg-glass) 50%); }
-.membership-card.diamond::before { background: var(--gradient-diamond); }
-.membership-card.platinum { background: linear-gradient(180deg, rgba(124, 58, 237, 0.15) 0%, var(--bg-glass) 50%); }
-.membership-card.platinum::before { background: var(--gradient-platinum); }
+.membership-card.bronze {
+  background: linear-gradient(180deg, rgba(180, 83, 9, 0.15) 0%, var(--bg-glass) 50%);
+}
+
+.membership-card.bronze::before {
+  background: var(--gradient-bronze);
+}
+
+.membership-card.silver {
+  background: linear-gradient(180deg, rgba(107, 114, 128, 0.15) 0%, var(--bg-glass) 50%);
+}
+
+.membership-card.silver::before {
+  background: var(--gradient-silver);
+}
+
+.membership-card.gold {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.15) 0%, var(--bg-glass) 50%);
+}
+
+.membership-card.gold::before {
+  background: var(--gradient-gold);
+}
+
+.membership-card.diamond {
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.15) 0%, var(--bg-glass) 50%);
+}
+
+.membership-card.diamond::before {
+  background: var(--gradient-diamond);
+}
+
+.membership-card.platinum {
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.15) 0%, var(--bg-glass) 50%);
+}
+
+.membership-card.platinum::before {
+  background: var(--gradient-platinum);
+}
 
 .membership-name {
   font-family: var(--font-display);
@@ -696,21 +782,25 @@ a:hover {
   letter-spacing: 1px;
   margin-bottom: 8px;
 }
+
 .membership-price {
   font-size: 32px;
   font-weight: 800;
   margin-bottom: 16px;
 }
+
 .membership-price span {
   font-size: 16px;
   font-weight: 400;
   color: var(--text-secondary);
 }
+
 .membership-features {
   list-style: none;
   text-align: left;
   margin-bottom: 20px;
 }
+
 .membership-features li {
   display: flex;
   align-items: center;
@@ -719,10 +809,12 @@ a:hover {
   font-size: 13px;
   color: var(--text-secondary);
 }
+
 .membership-features li .icon {
   color: var(--green-400);
   font-size: 16px;
 }
+
 .current-badge {
   display: inline-block;
   padding: 6px 16px;
@@ -767,11 +859,13 @@ a:hover {
   justify-content: space-between;
   margin-bottom: 20px;
 }
+
 .modal-title {
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 700;
 }
+
 .modal-close {
   width: 36px;
   height: 36px;
@@ -786,6 +880,7 @@ a:hover {
   font-size: 18px;
   transition: all 0.2s;
 }
+
 .modal-close:hover {
   background: var(--red-500);
   color: white;
@@ -795,6 +890,7 @@ a:hover {
 .lines-list {
   list-style: none;
 }
+
 .lines-item {
   display: flex;
   align-items: center;
@@ -806,18 +902,22 @@ a:hover {
   border: 1px solid var(--border-glass);
   transition: all 0.2s;
 }
+
 .lines-item:hover {
   border-color: var(--purple-500);
 }
+
 .lines-name {
   font-weight: 600;
   font-size: 14px;
 }
+
 .lines-id {
   font-family: monospace;
   font-size: 13px;
   color: var(--cyan-400);
 }
+
 .lines-upline {
   font-size: 11px;
   color: var(--text-muted);
@@ -830,6 +930,7 @@ a:hover {
 .dashboard-section {
   margin-top: 32px;
 }
+
 .dashboard-title {
   font-family: var(--font-display);
   font-size: 20px;
@@ -839,11 +940,13 @@ a:hover {
   align-items: center;
   gap: 8px;
 }
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
 }
+
 .dash-card {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -852,20 +955,24 @@ a:hover {
   text-align: center;
   transition: all 0.3s ease;
 }
+
 .dash-card:hover {
   transform: translateY(-2px);
   border-color: var(--border-glass-active);
 }
+
 .dash-card-icon {
   font-size: 28px;
   margin-bottom: 8px;
 }
+
 .dash-card-value {
   font-family: var(--font-display);
   font-size: 22px;
   font-weight: 800;
   margin-bottom: 4px;
 }
+
 .dash-card-label {
   font-size: 12px;
   color: var(--text-muted);
@@ -881,6 +988,7 @@ a:hover {
   margin: 0 auto;
   padding: 32px 20px;
 }
+
 .settings-card {
   background: var(--bg-glass);
   backdrop-filter: blur(20px);
@@ -888,6 +996,7 @@ a:hover {
   border-radius: var(--radius-xl);
   padding: 32px;
 }
+
 .settings-title {
   font-family: var(--font-display);
   font-size: 22px;
@@ -897,19 +1006,23 @@ a:hover {
   align-items: center;
   gap: 10px;
 }
+
 .settings-row {
   display: flex;
   justify-content: space-between;
   padding: 14px 0;
   border-bottom: 1px solid var(--border-glass);
 }
+
 .settings-row:last-child {
   border-bottom: none;
 }
+
 .settings-label {
   color: var(--text-secondary);
   font-size: 14px;
 }
+
 .settings-value {
   font-weight: 600;
   font-size: 14px;
@@ -928,6 +1041,7 @@ a:hover {
 .transaction-list {
   list-style: none;
 }
+
 .transaction-item {
   display: flex;
   align-items: center;
@@ -939,23 +1053,34 @@ a:hover {
   margin-bottom: 8px;
   transition: all 0.2s;
 }
+
 .transaction-item:hover {
   border-color: var(--purple-500);
 }
+
 .transaction-type {
   font-weight: 600;
   font-size: 14px;
 }
+
 .transaction-desc {
   font-size: 12px;
   color: var(--text-muted);
 }
+
 .transaction-amount {
   font-weight: 700;
   font-family: monospace;
 }
-.transaction-amount.positive { color: var(--green-400); }
-.transaction-amount.negative { color: var(--red-400); }
+
+.transaction-amount.positive {
+  color: var(--green-400);
+}
+
+.transaction-amount.negative {
+  color: var(--red-400);
+}
+
 .transaction-date {
   font-size: 11px;
   color: var(--text-muted);
@@ -974,6 +1099,7 @@ a:hover {
   margin-bottom: 24px;
   overflow-x: auto;
 }
+
 .admin-tab {
   padding: 10px 20px;
   border: none;
@@ -987,6 +1113,7 @@ a:hover {
   transition: all 0.2s;
   white-space: nowrap;
 }
+
 .admin-tab.active {
   background: var(--gradient-primary);
   color: white;
@@ -996,6 +1123,7 @@ a:hover {
   width: 100%;
   border-collapse: collapse;
 }
+
 .admin-table th {
   text-align: left;
   padding: 12px 16px;
@@ -1005,11 +1133,13 @@ a:hover {
   letter-spacing: 0.5px;
   border-bottom: 1px solid var(--border-glass);
 }
+
 .admin-table td {
   padding: 12px 16px;
   font-size: 14px;
   border-bottom: 1px solid var(--border-glass);
 }
+
 .admin-table tr:hover td {
   background: var(--bg-glass);
 }
@@ -1026,9 +1156,11 @@ a:hover {
   flex-wrap: wrap;
   gap: 12px;
 }
+
 .approval-info {
   flex: 1;
 }
+
 .approval-actions {
   display: flex;
   gap: 8px;
@@ -1041,6 +1173,7 @@ a:hover {
   list-style: none;
   counter-reset: terms;
 }
+
 .terms-list li {
   counter-increment: terms;
   padding: 16px;
@@ -1054,6 +1187,7 @@ a:hover {
   align-items: flex-start;
   gap: 12px;
 }
+
 .terms-list li::before {
   content: counter(terms);
   flex-shrink: 0;
@@ -1073,28 +1207,70 @@ a:hover {
    ANIMATIONS
    ============================================ */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
-.animate-fade-in { animation: fadeIn 0.3s ease; }
-.animate-fade-up { animation: fadeInUp 0.4s ease; }
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+.animate-fade-up {
+  animation: fadeInUp 0.4s ease;
+}
 
 /* ============================================
    LOADING
@@ -1108,7 +1284,12 @@ a:hover {
   animation: spin 0.8s linear infinite;
   margin: 20px auto;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 .loading-page {
   min-height: 100vh;
@@ -1121,18 +1302,57 @@ a:hover {
    RESPONSIVE
    ============================================ */
 @media (max-width: 768px) {
-  .auth-card { padding: 28px 20px; }
-  .landing-actions { flex-direction: column; width: 100%; }
-  .landing-stats { flex-direction: column; gap: 20px; }
-  .home-grid { grid-template-columns: 1fr; }
-  .membership-grid { grid-template-columns: 1fr; }
-  .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
-  .app-header { padding: 12px 16px; }
-  .otp-row { flex-direction: column; }
-  .approval-card { flex-direction: column; text-align: center; }
-  .settings-row { flex-direction: column; gap: 4px; }
-  .admin-tabs { flex-wrap: nowrap; }
+  .auth-card {
+    padding: 28px 20px;
+  }
+
+  .landing-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .landing-stats {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .membership-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .app-header {
+    padding: 12px 16px;
+  }
+
+  .otp-row {
+    flex-direction: column;
+  }
+
+  .approval-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .settings-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .admin-tabs {
+    flex-wrap: nowrap;
+  }
 }
+
 @media (max-width: 480px) {
-  .dashboard-grid { grid-template-columns: 1fr; }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
 }
