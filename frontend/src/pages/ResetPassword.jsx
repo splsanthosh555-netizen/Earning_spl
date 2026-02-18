@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import API from '../api/axios';
 
@@ -7,6 +8,7 @@ export default function ResetPassword() {
     const navigate = useNavigate();
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
@@ -45,13 +47,25 @@ export default function ResetPassword() {
                     <form onSubmit={handleSubmit}>
                         <div className="form-group">
                             <label className="form-label">New Password</label>
-                            <input className="form-input" type="password" placeholder="Enter new password"
-                                value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+                            <div style={{ position: 'relative' }}>
+                                <input className="form-input" type={showPassword ? "text" : "password"} placeholder="Enter new password"
+                                    value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required style={{ paddingRight: 40 }} />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                                    style={{ position: 'absolute', right: 10, top: 10, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                </button>
+                            </div>
                         </div>
                         <div className="form-group">
                             <label className="form-label">Confirm Password</label>
-                            <input className="form-input" type="password" placeholder="Confirm new password"
-                                value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                            <div style={{ position: 'relative' }}>
+                                <input className="form-input" type={showPassword ? "text" : "password"} placeholder="Confirm new password"
+                                    value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required style={{ paddingRight: 40 }} />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                                    style={{ position: 'absolute', right: 10, top: 10, background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                </button>
+                            </div>
                         </div>
                         <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
                             {loading ? 'Resetting...' : 'Reset Password'}
