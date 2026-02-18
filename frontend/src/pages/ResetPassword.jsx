@@ -11,13 +11,20 @@ export default function ResetPassword() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (newPassword !== confirmPassword) return toast.error('Passwords do not match');
+        const trimmedNewPassword = newPassword.trim();
+        const trimmedConfirmPassword = confirmPassword.trim();
+
+        if (trimmedNewPassword !== trimmedConfirmPassword) return toast.error('Passwords do not match');
         const resetToken = localStorage.getItem('spl_reset_token');
         if (!resetToken) return toast.error('No reset token. Please verify again.');
 
         setLoading(true);
         try {
-            await API.post('/auth/reset-password', { resetToken, newPassword, confirmPassword });
+            await API.post('/auth/reset-password', {
+                resetToken,
+                newPassword: trimmedNewPassword,
+                confirmPassword: trimmedConfirmPassword
+            });
             localStorage.removeItem('spl_reset_token');
             toast.success('Password reset successful!');
             navigate('/login');

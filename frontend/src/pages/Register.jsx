@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { FiUser, FiMail, FiPhone, FiLock, FiUserPlus, FiCheck } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiLock, FiUserPlus, FiCheck, FiEye, FiEyeOff } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import API from '../api/axios';
 
@@ -23,6 +23,7 @@ export default function Register() {
     const [generatedUserId, setGeneratedUserId] = useState(null);
     const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
     const [sendingPhoneOtp, setSendingPhoneOtp] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -91,11 +92,19 @@ export default function Register() {
         e.preventDefault();
         if (!emailVerified) return toast.error('Please verify your email');
         if (!phoneVerified) return toast.error('Please verify your phone');
-        if (form.password !== form.confirmPassword) return toast.error('Passwords do not match');
+        const password = form.password.trim();
+        const confirmPassword = form.confirmPassword.trim();
+
+        if (password !== confirmPassword) return toast.error('Passwords do not match');
+        if (password.length < 6) return toast.error('Password must be at least 6 characters');
 
         setLoading(true);
         try {
-            const res = await API.post('/auth/register', form);
+            const res = await API.post('/auth/register', {
+                ...form,
+                password,
+                confirmPassword
+            });
             setGeneratedUserId(res.data.userId);
             toast.success('Registration successful!');
         } catch (err) {
@@ -210,14 +219,40 @@ export default function Register() {
 
                         <div className="form-group">
                             <label className="form-label">Password</label>
-                            <input className="form-input" name="password" type="password" placeholder="Minimum 6 characters"
-                                value={form.password} onChange={handleChange} required />
+                            <div style={{ position: 'relative' }}>
+                                <input className="form-input" name="password" type={showPassword ? "text" : "password"} placeholder="Minimum 6 characters"
+                                    value={form.password} onChange={handleChange} required style={{ paddingRight: 40 }} />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{
+                                        position: 'absolute', right: 10, top: 10,
+                                        background: 'none', border: 'none', color: 'var(--text-muted)',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                </button>
+                            </div>
                         </div>
 
                         <div className="form-group">
                             <label className="form-label">Confirm Password</label>
-                            <input className="form-input" name="confirmPassword" type="password" placeholder="Confirm your password"
-                                value={form.confirmPassword} onChange={handleChange} required />
+                            <div style={{ position: 'relative' }}>
+                                <input className="form-input" name="confirmPassword" type={showPassword ? "text" : "password"} placeholder="Confirm your password"
+                                    value={form.confirmPassword} onChange={handleChange} required style={{ paddingRight: 40 }} />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    style={{
+                                        position: 'absolute', right: 10, top: 10,
+                                        background: 'none', border: 'none', color: 'var(--text-muted)',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                </button>
+                            </div>
                         </div>
 
                         <div className="form-group">

@@ -44,7 +44,13 @@ router.post('/verify-otp', async (req, res) => {
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
     try {
-        const { firstName, lastName, email, phone, password, confirmPassword, gender, referralCode } = req.body;
+        let { firstName, lastName, email, phone, password, confirmPassword, gender, referralCode } = req.body;
+
+        // Trim values
+        email = email?.trim().toLowerCase();
+        phone = phone?.trim();
+        password = password?.trim();
+        confirmPassword = confirmPassword?.trim();
 
         // Validation
         if (!firstName || !lastName || !email || !phone || !password || !confirmPassword || !gender) {

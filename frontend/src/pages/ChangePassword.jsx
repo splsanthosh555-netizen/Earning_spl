@@ -13,10 +13,18 @@ export default function ChangePassword() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (form.newPassword !== form.confirmPassword) return toast.error('Passwords do not match');
+        const oldPassword = form.oldPassword.trim();
+        const newPassword = form.newPassword.trim();
+        const confirmPassword = form.confirmPassword.trim();
+
+        if (newPassword !== confirmPassword) return toast.error('Passwords do not match');
         setLoading(true);
         try {
-            await API.put('/user/change-password', form);
+            await API.put('/user/change-password', {
+                oldPassword,
+                newPassword,
+                confirmPassword
+            });
             toast.success('Password changed successfully!');
             setForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
         } catch (err) {
