@@ -18,7 +18,7 @@ export default function ForgotPassword() {
     const sendEmailOtp = async () => {
         if (!form.email) return toast.error('Enter email first');
         try {
-            const res = await API.post('/auth/send-otp', { target: form.email, type: 'email' });
+            const res = await API.post('/auth/send-otp', { target: form.email, type: 'email', purpose: 'reset' });
             toast.success('OTP sent to email');
             if (res.data.otp) toast(`Dev OTP: ${res.data.otp}`, { icon: '🔑', duration: 10000 });
         } catch (err) {
@@ -37,7 +37,7 @@ export default function ForgotPassword() {
     const sendPhoneOtp = async () => {
         if (!form.phone) return toast.error('Enter phone first');
         try {
-            const res = await API.post('/auth/send-otp', { target: form.phone, type: 'phone' });
+            const res = await API.post('/auth/send-otp', { target: form.phone, type: 'phone', purpose: 'reset' });
             toast.success('OTP sent to phone');
             if (res.data.otp) toast(`Dev OTP: ${res.data.otp}`, { icon: '🔑', duration: 10000 });
         } catch (err) { toast.error('Failed'); }

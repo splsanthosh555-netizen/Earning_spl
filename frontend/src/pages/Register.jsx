@@ -33,7 +33,7 @@ export default function Register() {
         if (!form.email) return toast.error('Enter email first');
         setSendingEmailOtp(true);
         try {
-            const res = await API.post('/auth/send-otp', { target: form.email, type: 'email' });
+            const res = await API.post('/auth/send-otp', { target: form.email, type: 'email', purpose: 'register' });
             setEmailOtpSent(true);
             toast.success('OTP generated successfully');
 
@@ -63,7 +63,7 @@ export default function Register() {
         if (!form.phone) return toast.error('Enter phone number first');
         setSendingPhoneOtp(true);
         try {
-            const res = await API.post('/auth/send-otp', { target: form.phone, type: 'phone' });
+            const res = await API.post('/auth/send-otp', { target: form.phone, type: 'phone', purpose: 'register' });
             setPhoneOtpSent(true);
             toast.success('OTP generated successfully');
 

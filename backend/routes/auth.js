@@ -15,13 +15,31 @@ const generateToken = (userId) => {
 // POST /api/auth/send-otp
 router.post('/send-otp', async (req, res) => {
     try {
-        const { target, type } = req.body;
+        const { target, type, purpose } = req.body;
         if (!target || !type) {
             return res.status(400).json({ message: 'Target and type required' });
         }
+
+        // Uniqueness Check for Registration
+        if (purpose === 'register') {
+            const query = type === 'email' ? { email: target.toLowerCase() } : { phone: target };
+            const existingUser = await User.findOne(query);
+            if (existingUser) {
+                return res.status(400).json({ message: `This ${type} is already registered. Please login.` });
+            }
+        }
+
+        // Existence Check for Password Reset
+        if (purpose === 'reset') {
+            const query = type === 'email' ? { email: target.toLowerCase() } : { phone: target };
+            const existingUser = await User.findOne(query);
+            if (!existingUser) {
+                return res.status(404).json({ message: `No account found with this ${type}.` });
+            }
+        }
+
         const otp = await sendOTP(target, type);
-        // In dev env, return OTP for testing convenience
-        res.json({ message: `OTP sent to ${type}`, otp });
+        res.json({ message: `OTP sent to ${type}`, otp }); // Still returning otp for dev convenience, remove in full prod if desired
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
