@@ -39,7 +39,7 @@ router.post('/send-otp', async (req, res) => {
         }
 
         const otp = await sendOTP(target, type);
-        res.json({ message: `OTP sent to ${type}`, otp }); // Still returning otp for dev convenience, remove in full prod if desired
+        res.json({ message: `OTP sent to ${type}` });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
