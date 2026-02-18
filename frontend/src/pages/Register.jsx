@@ -21,6 +21,8 @@ export default function Register() {
     const [phoneOtpSent, setPhoneOtpSent] = useState(false);
     const [loading, setLoading] = useState(false);
     const [generatedUserId, setGeneratedUserId] = useState(null);
+    const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
+    const [sendingPhoneOtp, setSendingPhoneOtp] = useState(false);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -28,15 +30,22 @@ export default function Register() {
 
     const sendEmailOtp = async () => {
         if (!form.email) return toast.error('Enter email first');
+        setSendingEmailOtp(true);
         try {
             const res = await API.post('/auth/send-otp', { target: form.email, type: 'email' });
             setEmailOtpSent(true);
-            toast.success('OTP sent to email');
-            // Dev: show OTP in toast
-            if (res.data.otp) toast(`Dev OTP: ${res.data.otp}`, { icon: '🔑', duration: 10000 });
+            toast.success('OTP generated successfully');
+
+            // In development, the OTP is returned in the response
+            if (res.data.otp) {
+                console.log(`Email OTP: ${res.data.otp}`);
+                toast(`Dev OTP: ${res.data.otp}`, { icon: '🔑', duration: 15000 });
+            }
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to send OTP');
+            console.error('Email OTP Error:', err);
+            toast.error(err.response?.data?.message || 'Failed to connect to server');
         }
+        setSendingEmailOtp(false);
     };
 
     const verifyEmailOtp = async () => {
@@ -51,14 +60,21 @@ export default function Register() {
 
     const sendPhoneOtp = async () => {
         if (!form.phone) return toast.error('Enter phone number first');
+        setSendingPhoneOtp(true);
         try {
             const res = await API.post('/auth/send-otp', { target: form.phone, type: 'phone' });
             setPhoneOtpSent(true);
-            toast.success('OTP sent to phone');
-            if (res.data.otp) toast(`Dev OTP: ${res.data.otp}`, { icon: '🔑', duration: 10000 });
+            toast.success('OTP generated successfully');
+
+            if (res.data.otp) {
+                console.log(`Phone OTP: ${res.data.otp}`);
+                toast(`Dev OTP: ${res.data.otp}`, { icon: '🔑', duration: 15000 });
+            }
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to send OTP');
+            console.error('Phone OTP Error:', err);
+            toast.error(err.response?.data?.message || 'Failed to connect to server');
         }
+        setSendingPhoneOtp(false);
     };
 
     const verifyPhoneOtp = async () => {
@@ -144,8 +160,8 @@ export default function Register() {
                                 <input className="form-input" name="email" type="email" placeholder="your@email.com"
                                     value={form.email} onChange={handleChange} disabled={emailVerified} required />
                                 {!emailVerified && (
-                                    <button type="button" className="btn btn-secondary btn-sm" onClick={sendEmailOtp}>
-                                        {emailOtpSent ? 'Resend' : 'Send OTP'}
+                                    <button type="button" className="btn btn-secondary btn-sm" onClick={sendEmailOtp} disabled={sendingEmailOtp}>
+                                        {sendingEmailOtp ? '...' : (emailOtpSent ? 'Resend' : 'Send OTP')}
                                     </button>
                                 )}
                                 {emailVerified && <FiCheck style={{ color: 'var(--green-400)', fontSize: 20 }} />}
@@ -171,8 +187,8 @@ export default function Register() {
                                 <input className="form-input" name="phone" placeholder="10-digit phone number"
                                     value={form.phone} onChange={handleChange} disabled={phoneVerified} required />
                                 {!phoneVerified && (
-                                    <button type="button" className="btn btn-secondary btn-sm" onClick={sendPhoneOtp}>
-                                        {phoneOtpSent ? 'Resend' : 'Send OTP'}
+                                    <button type="button" className="btn btn-secondary btn-sm" onClick={sendPhoneOtp} disabled={sendingPhoneOtp}>
+                                        {sendingPhoneOtp ? '...' : (phoneOtpSent ? 'Resend' : 'Send OTP')}
                                     </button>
                                 )}
                                 {phoneVerified && <FiCheck style={{ color: 'var(--green-400)', fontSize: 20 }} />}
