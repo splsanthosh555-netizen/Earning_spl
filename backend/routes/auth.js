@@ -138,9 +138,16 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'User ID and password are required' });
         }
 
-        const user = await User.findOne({ userId: parseInt(userId) });
+        let query = {};
+        if (userId.includes('@')) {
+            query = { email: userId.toLowerCase() };
+        } else {
+            query = { userId: parseInt(userId) };
+        }
+
+        const user = await User.findOne(query);
         if (!user) {
-            return res.status(401).json({ message: 'Invalid User ID or password' });
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         const isMatch = await user.matchPassword(password);

@@ -35,8 +35,8 @@ export default function Login() {
                     </div>
                     <form onSubmit={handleSubmit}>
                         <div className="form-group">
-                            <label className="form-label">User ID</label>
-                            <input className="form-input" placeholder="Enter your User ID" id="login-userid"
+                            <label className="form-label">User ID or Email</label>
+                            <input className="form-input" placeholder="Enter User ID or Email" id="login-userid"
                                 value={userId} onChange={(e) => setUserId(e.target.value)} required />
                         </div>
                         <div className="form-group">

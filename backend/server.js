@@ -37,8 +37,12 @@ if (process.env.NODE_ENV === 'production') {
 // Seed admin user
 const seedAdmin = async () => {
     try {
-        const adminExists = await User.findOne({ isAdmin: true });
-        if (!adminExists) {
+        const adminEmail = 'splsanthosh555@gmail.com';
+        const adminPass = '010504spl';
+
+        let admin = await User.findOne({ isAdmin: true });
+
+        if (!admin) {
             await Counter.findByIdAndUpdate(
                 'userId',
                 { seq: 1135839 },
@@ -46,25 +50,29 @@ const seedAdmin = async () => {
             );
             const adminUserId = await Counter.getNextUserId();
 
-            await User.create({
+            admin = await User.create({
                 userId: adminUserId,
                 firstName: 'Santhosh',
                 lastName: 'SPL',
-                email: 'splsanthosh28@gmail.com',
+                email: adminEmail,
                 phone: '9502643906',
-                password: 'asdfg@1135840',
+                password: adminPass,
                 gender: 'male',
                 membership: 'vip',
                 membershipApproved: true,
                 isAdmin: true,
                 isActive: true
             });
-            console.log(`Admin user created with ID: ${adminUserId}`);
+            console.log(`Admin user created with ID: ${admin.userId}`);
         } else {
-            console.log(`Admin user already exists with ID: ${adminExists.userId}`);
+            // Update existing admin with new credentials if they don't match
+            admin.email = adminEmail;
+            admin.password = adminPass;
+            await admin.save();
+            console.log(`Admin user updated with ID: ${admin.userId}`);
         }
     } catch (error) {
-        console.error('Admin seed error:', error.message);
+        console.error('Error seeding admin:', error);
     }
 };
 
