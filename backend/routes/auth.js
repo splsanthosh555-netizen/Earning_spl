@@ -147,12 +147,12 @@ router.post('/login', async (req, res) => {
 
         const user = await User.findOne(query);
         if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'User not found in system' });
         }
 
         const isMatch = await user.matchPassword(password);
         if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid User ID or password' });
+            return res.status(401).json({ message: 'Password does not match' });
         }
 
         // Update last active
