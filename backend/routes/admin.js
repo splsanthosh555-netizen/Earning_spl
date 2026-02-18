@@ -8,6 +8,7 @@ const router = express.Router();
 
 // GET /api/admin/dashboard
 router.get('/dashboard', protect, adminOnly, async (req, res) => {
+    console.log(`Admin dashboard accessed by: ${req.user.email} (isAdmin: ${req.user.isAdmin})`);
     try {
         const totalUsers = await User.countDocuments({ isAdmin: false });
         const activeUsers = await User.countDocuments({ isActive: true, isAdmin: false });

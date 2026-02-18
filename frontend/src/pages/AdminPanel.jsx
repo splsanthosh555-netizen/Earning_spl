@@ -41,7 +41,9 @@ export default function AdminPanel() {
                 setInactiveUsers(res.data);
             }
         } catch (err) {
-            toast.error('Failed to load data');
+            const msg = err.response?.data?.message || 'Failed to load data';
+            toast.error(msg);
+            console.error('Admin Fetch Error:', err);
         }
     };
 
