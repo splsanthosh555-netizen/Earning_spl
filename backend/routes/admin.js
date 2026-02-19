@@ -229,4 +229,27 @@ router.post('/deactivate-inactive', protect, adminOnly, async (req, res) => {
     }
 });
 
+// POST /api/admin/reset-my-balance - TEMPORARY for testing withdrawal UI
+router.post('/reset-my-balance', protect, adminOnly, async (req, res) => {
+    try {
+        const user = await User.findOne({ userId: req.user.userId });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // Restore balance to total earnings (refund all withdrawals)
+        user.walletBalance = user.totalEarnings;
+        await user.save();
+
+        // Delete all withdrawal transactions for this user
+        await Transaction.deleteMany({ userId: user.userId, type: 'withdrawal' });
+
+        res.json({
+            message: 'Balance reset successful',
+            walletBalance: user.walletBalance,
+            totalEarnings: user.totalEarnings
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;

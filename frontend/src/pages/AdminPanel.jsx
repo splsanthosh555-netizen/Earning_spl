@@ -67,6 +67,16 @@ export default function AdminPanel() {
         setLoading(false);
     };
 
+    const resetBalance = async () => {
+        setLoading(true);
+        try {
+            const res = await API.post('/admin/reset-my-balance');
+            toast.success(res.data.message);
+            loadTabData('dashboard');
+        } catch (err) { toast.error('Failed'); }
+        setLoading(false);
+    };
+
     const deactivateInactive = async () => {
         try {
             const res = await API.post('/admin/deactivate-inactive');
@@ -130,9 +140,12 @@ export default function AdminPanel() {
                             <div className="dash-card-label">Weekly Earnings</div>
                         </div>
                     </div>
-                    <div style={{ marginTop: 20 }}>
+                    <div style={{ marginTop: 20, display: 'flex', gap: 12 }}>
                         <button className="btn btn-danger btn-sm" onClick={deactivateInactive}>
                             Deactivate 30+ Day Inactive Users
+                        </button>
+                        <button className="btn btn-warning btn-sm" onClick={resetBalance}>
+                            ⚠️ TEST: Reset My Balance (Refund Withdrawals)
                         </button>
                     </div>
                 </div>
