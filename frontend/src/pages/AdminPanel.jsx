@@ -215,6 +215,24 @@ export default function AdminPanel() {
                                     <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                                         ID: {t.userId} | Amount: ₹{t.amount.toFixed(2)}
                                     </div>
+                                    {t.bankDetails && (
+                                        <div style={{
+                                            fontSize: 12, background: 'rgba(255,255,255,0.05)',
+                                            padding: '6px 10px', borderRadius: 6, margin: '8px 0',
+                                            border: '1px solid var(--border-glass)'
+                                        }}>
+                                            {t.bankDetails.upiId ? (
+                                                <div style={{ color: 'var(--cyan-400)', fontWeight: 600 }}>
+                                                    UPI ID: {t.bankDetails.upiId}
+                                                </div>
+                                            ) : (
+                                                <div style={{ color: 'var(--text-muted)' }}>
+                                                    <span style={{ color: 'var(--text-main)' }}>Bank: {t.bankDetails.bankName}</span><br />
+                                                    A/C: {t.bankDetails.accountNumber} | IFSC: {t.bankDetails.ifscCode}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                                         {new Date(t.createdAt).toLocaleString()}
                                     </div>

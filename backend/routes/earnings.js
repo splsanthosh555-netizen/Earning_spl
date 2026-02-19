@@ -43,8 +43,10 @@ router.post('/withdraw', protect, async (req, res) => {
         if (user.walletBalance < amount) {
             return res.status(400).json({ message: 'Insufficient wallet balance' });
         }
-        if (user.walletBalance < 100) {
-            return res.status(400).json({ message: 'Wallet balance must be at least ₹100 to withdraw' });
+        // Check if user has bank details
+        const bankDetails = await BankDetails.findOne({ userId: req.user.userId });
+        if (!bankDetails || (!bankDetails.accountNumber && !bankDetails.upiId)) {
+            return res.status(400).json({ message: 'Please update your Bank/UPI details first' });
         }
 
         // Create pending withdrawal
@@ -52,7 +54,7 @@ router.post('/withdraw', protect, async (req, res) => {
             userId: user.userId,
             type: 'withdrawal',
             amount,
-            description: `Withdrawal request of ₹${amount}`,
+            description: `Withdrawal to ${bankDetails.upiId || bankDetails.accountNumber}`,
             status: 'pending'
         });
 

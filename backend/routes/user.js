@@ -56,7 +56,7 @@ router.get('/bank-details', protect, async (req, res) => {
 // POST /api/user/bank-details
 router.post('/bank-details', protect, async (req, res) => {
     try {
-        const { bankName, accountHolderName, accountNumber, confirmAccountNumber, ifscCode } = req.body;
+        const { bankName, accountHolderName, accountNumber, confirmAccountNumber, ifscCode, upiId } = req.body;
         if (!bankName || !accountHolderName || !accountNumber || !confirmAccountNumber || !ifscCode) {
             return res.status(400).json({ message: 'All fields required' });
         }
@@ -70,6 +70,7 @@ router.post('/bank-details', protect, async (req, res) => {
             existing.accountHolderName = accountHolderName;
             existing.accountNumber = accountNumber;
             existing.ifscCode = ifscCode;
+            existing.upiId = upiId; // Update UPI ID
             existing.updatedAt = new Date();
             await existing.save();
             return res.json({ message: 'Bank details updated', bankDetails: existing });
@@ -80,7 +81,8 @@ router.post('/bank-details', protect, async (req, res) => {
             bankName,
             accountHolderName,
             accountNumber,
-            ifscCode
+            ifscCode,
+            upiId // Save UPI ID
         });
         res.status(201).json({ message: 'Bank details saved', bankDetails });
     } catch (error) {

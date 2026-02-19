@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiTrendingUp, FiDollarSign } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -11,13 +11,24 @@ export default function Earnings() {
     const [earnings, setEarnings] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [withdrawAmount, setWithdrawAmount] = useState('');
+    const [bankDetails, setBankDetails] = useState(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         fetchEarnings();
         fetchHistory();
+        fetchBankDetails();
         refreshUser();
     }, []);
+
+    const fetchBankDetails = async () => {
+        try {
+            const res = await API.get('/user/bank-details');
+            if (res.data && (res.data.accountNumber || res.data.upiId)) {
+                setBankDetails(res.data);
+            }
+        } catch (err) { }
+    };
 
     const fetchEarnings = async () => {
         try {
@@ -98,13 +109,26 @@ export default function Earnings() {
                 <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>
                     <FiDollarSign /> Withdraw
                 </h3>
+                {bankDetails ? (
+                    <p style={{ fontSize: 13, color: 'var(--cyan-400)', marginBottom: 16, background: 'rgba(34, 211, 238, 0.1)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(34, 211, 238, 0.2)' }}>
+                        <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: 11, marginBottom: 2 }}>Withdrawal Destination:</span>
+                        <strong>{bankDetails.upiId || `${bankDetails.bankName} (${bankDetails.accountNumber})`}</strong>
+                    </p>
+                ) : (
+                    <div style={{ marginBottom: 16, padding: '12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                        <p style={{ color: 'var(--red-400)', fontSize: 13, marginBottom: 4 }}>⚠️ No payment details found</p>
+                        <Link to="/bank-details" style={{ color: 'var(--cyan-400)', fontSize: 13, fontWeight: 600, textDecoration: 'underline' }}>
+                            Add Bank or UPI ID to enable withdrawal
+                        </Link>
+                    </div>
+                )}
                 <div className="otp-row">
                     <input className="form-input" type="number" placeholder="Enter amount (min ₹100)"
                         value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
                     <button
                         className="btn btn-success"
                         onClick={handleWithdraw}
-                        disabled={loading || !earnings?.canWithdraw}
+                        disabled={loading || !earnings?.canWithdraw || !bankDetails}
                     >
                         {loading ? 'Processing...' : 'Withdraw'}
                     </button>

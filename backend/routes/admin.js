@@ -100,7 +100,8 @@ router.get('/approvals', protect, adminOnly, async (req, res) => {
         const withdrawalDetails = await Promise.all(
             pendingWithdrawals.map(async (t) => {
                 const user = await User.findOne({ userId: t.userId }).select('userId firstName lastName');
-                return { ...t.toObject(), user };
+                const bankDetails = await BankDetails.findOne({ userId: t.userId });
+                return { ...t.toObject(), user, bankDetails };
             })
         );
 

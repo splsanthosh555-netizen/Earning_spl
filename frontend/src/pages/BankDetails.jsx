@@ -7,22 +7,23 @@ import API from '../api/axios';
 export default function BankDetails() {
     const navigate = useNavigate();
     const [form, setForm] = useState({
-        bankName: '', accountHolderName: '', accountNumber: '', confirmAccountNumber: '', ifscCode: ''
+        bankName: '', accountHolderName: '', accountNumber: '', confirmAccountNumber: '', ifscCode: '', upiId: ''
     });
     const [loading, setLoading] = useState(false);
     const [existing, setExisting] = useState(false);
 
     useEffect(() => {
         API.get('/user/bank-details').then(res => {
-            if (res.data && res.data.bankName) {
+            if (res.data) {
                 setForm({
-                    bankName: res.data.bankName,
-                    accountHolderName: res.data.accountHolderName,
-                    accountNumber: res.data.accountNumber,
-                    confirmAccountNumber: res.data.accountNumber,
-                    ifscCode: res.data.ifscCode
+                    bankName: res.data.bankName || '',
+                    accountHolderName: res.data.accountHolderName || '',
+                    accountNumber: res.data.accountNumber || '',
+                    confirmAccountNumber: res.data.accountNumber || '',
+                    ifscCode: res.data.ifscCode || '',
+                    upiId: res.data.upiId || ''
                 });
-                setExisting(true);
+                if (res.data.bankName) setExisting(true);
             }
         }).catch(() => { });
     }, []);
@@ -75,6 +76,11 @@ export default function BankDetails() {
                         <label className="form-label">IFSC Code</label>
                         <input className="form-input" name="ifscCode" placeholder="e.g. SBIN0001234"
                             value={form.ifscCode} onChange={handleChange} required style={{ textTransform: 'uppercase' }} />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">UPI ID (Optional)</label>
+                        <input className="form-input" name="upiId" placeholder="e.g. user@okhdfc"
+                            value={form.upiId} onChange={handleChange} />
                     </div>
                     <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
                         {loading ? 'Saving...' : (existing ? 'Update Details' : 'Save Details')}

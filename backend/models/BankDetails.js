@@ -6,6 +6,7 @@ const bankDetailsSchema = new mongoose.Schema({
     accountHolderName: { type: String, required: true, trim: true },
     accountNumber: { type: String, required: true, trim: true },
     ifscCode: { type: String, required: true, trim: true, uppercase: true },
+    upiId: { type: String, trim: true }, // Added UPI ID support
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
