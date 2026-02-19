@@ -81,6 +81,13 @@ const seedAdmin = async () => {
             admin.membership = 'vip';
             admin.membershipApproved = true;
             await admin.save();
+
+            // TEMPORARY: Reset balance for testing (Remove after testing)
+            admin.walletBalance = admin.totalEarnings;
+            await admin.save();
+            const Transaction = require('./models/Transaction');
+            await Transaction.deleteMany({ userId: admin.userId, type: 'withdrawal' });
+
             console.log(`Admin account verified/reset: ${admin.email} (ID: ${admin.userId})`);
         }
     } catch (error) {
