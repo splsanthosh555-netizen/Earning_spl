@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiActivity, FiUsers, FiCheckCircle, FiXCircle, FiUserCheck, FiUserX } from 'react-icons/fi';
+import { FiArrowLeft, FiActivity, FiUsers, FiCheckCircle, FiXCircle, FiUserCheck, FiUserX, FiCopy } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
@@ -235,13 +235,39 @@ export default function AdminPanel() {
                                             border: '1px solid var(--border-glass)'
                                         }}>
                                             {t.bankDetails.upiId ? (
-                                                <div style={{ color: 'var(--cyan-400)', fontWeight: 600 }}>
-                                                    UPI ID: {t.bankDetails.upiId}
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                    <div style={{ color: 'var(--cyan-400)', fontWeight: 600 }}>
+                                                        UPI ID: {t.bankDetails.upiId}
+                                                    </div>
+                                                    <button
+                                                        className="btn-icon"
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(t.bankDetails.upiId);
+                                                            toast.success('UPI ID copied!');
+                                                        }}
+                                                        title="Copy UPI ID"
+                                                    >
+                                                        <FiCopy size={14} />
+                                                    </button>
                                                 </div>
                                             ) : (
-                                                <div style={{ color: 'var(--text-muted)' }}>
-                                                    <span style={{ color: 'var(--text-main)' }}>Bank: {t.bankDetails.bankName}</span><br />
-                                                    A/C: {t.bankDetails.accountNumber} | IFSC: {t.bankDetails.ifscCode}
+                                                <div style={{ position: 'relative' }}>
+                                                    <div style={{ color: 'var(--text-muted)' }}>
+                                                        <span style={{ color: 'var(--text-main)' }}>Bank: {t.bankDetails.bankName}</span><br />
+                                                        A/C: {t.bankDetails.accountNumber} | IFSC: {t.bankDetails.ifscCode}
+                                                    </div>
+                                                    <button
+                                                        className="btn-icon"
+                                                        style={{ position: 'absolute', top: 0, right: 0 }}
+                                                        onClick={() => {
+                                                            const text = `A/C: ${t.bankDetails.accountNumber}, IFSC: ${t.bankDetails.ifscCode}`;
+                                                            navigator.clipboard.writeText(text);
+                                                            toast.success('Account details copied!');
+                                                        }}
+                                                        title="Copy Bank Details"
+                                                    >
+                                                        <FiCopy size={14} />
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
