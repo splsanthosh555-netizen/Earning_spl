@@ -12,7 +12,8 @@ router.get('/total', protect, async (req, res) => {
         res.json({
             totalEarnings: user.totalEarnings,
             walletBalance: user.walletBalance,
-            canWithdraw: user.walletBalance >= 100
+            // Bypass ₹100 check for Admin to allow testing withdrawal flow
+            canWithdraw: user.isAdmin ? true : user.walletBalance >= 100
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -40,9 +41,17 @@ router.post('/withdraw', protect, async (req, res) => {
         if (!amount || amount < 100) {
             return res.status(400).json({ message: 'Minimum withdrawal amount is ₹100' });
         }
-        if (user.walletBalance < amount) {
+
+        // Only enforce balance check if NOT an admin (to allow testing)
+        if (!user.isAdmin && user.walletBalance < amount) {
             return res.status(400).json({ message: 'Insufficient wallet balance' });
         }
+
+        // Only enforce minimum balance if NOT an admin
+        if (!user.isAdmin && user.walletBalance < 100) {
+            return res.status(400).json({ message: 'Wallet balance must be at least ₹100 to withdraw' });
+        }
+
         // Check if user has bank details
         const bankDetails = await BankDetails.findOne({ userId: req.user.userId });
         if (!bankDetails || (!bankDetails.accountNumber && !bankDetails.upiId)) {
@@ -58,9 +67,11 @@ router.post('/withdraw', protect, async (req, res) => {
             status: 'pending'
         });
 
-        // Hold the amount
-        user.walletBalance -= amount;
-        await user.save();
+        // Hold the amount (only if balance is sufficient)
+        if (user.walletBalance >= amount) {
+            user.walletBalance -= amount;
+            await user.save();
+        }
 
         res.json({ message: 'Withdrawal request submitted. Waiting for admin approval.' });
     } catch (error) {
