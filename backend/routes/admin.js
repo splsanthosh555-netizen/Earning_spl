@@ -1,5 +1,6 @@
 const express = require('express');
 const User = require('../models/User');
+const BankDetails = require('../models/BankDetails');
 const Transaction = require('../models/Transaction');
 const { protect, adminOnly } = require('../middleware/auth');
 const { processMembershipApproval } = require('./membership');
