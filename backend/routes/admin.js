@@ -146,9 +146,33 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
         if (action === 'approve') {
-            transaction.status = 'approved';
-            await transaction.save();
-            res.json({ message: 'Withdrawal approved' });
+            const user = await User.findOne({ userId: transaction.userId });
+            const bankDetails = await BankDetails.findOne({ userId: transaction.userId });
+
+            if (!user || !bankDetails) {
+                return res.status(400).json({ message: 'User or Bank Details missing' });
+            }
+
+            // Attempt Automated Payout via RazorpayX
+            try {
+                const { createPayout } = require('../utils/payouts');
+                // In production, this will use the real keys. In test mode, it uses dummy keys.
+                const payout = await createPayout(user, bankDetails, transaction.amount);
+                console.log('Payout initiated:', payout.id);
+
+                transaction.status = 'approved';
+                transaction.description += ` (Payout: ${payout.id})`;
+                await transaction.save();
+
+                res.json({ message: 'Withdrawal approved and payout initiated!', payoutId: payout.id });
+            } catch (payoutError) {
+                console.error('Automated Payout Failed:', payoutError.message);
+                // Even if automated fails, we might want to allow manual or just error out
+                return res.status(500).json({
+                    message: 'Automated payout system error. Please try manual payout.',
+                    error: payoutError.message
+                });
+            }
         } else {
             // Reject - refund amount back to user wallet
             transaction.status = 'rejected';
