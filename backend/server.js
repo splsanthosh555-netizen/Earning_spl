@@ -9,7 +9,15 @@ const Counter = require('./models/Counter');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'https://earning-spl-5e2a.vercel.app',
+        'https://earningspl.com',
+        'https://www.earningspl.com'
+    ],
+    credentials: true
+}));
 app.use(express.json());
 
 // API Routes
