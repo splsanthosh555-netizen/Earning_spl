@@ -67,13 +67,13 @@ const seedAdmin = async () => {
             });
             console.log(`Admin user created: ${admin.email} (ID: ${admin.userId})`);
         } else {
-            console.log('User with admin email found, ensuring admin status and VIP membership...');
-            // admin.password = adminPass; // Commenting this out to avoid overwriting if changed via UI
+            console.log('User with admin email found, ensuring credentials and admin status...');
+            admin.password = adminPass; // Force reset to default for recovery
             admin.isAdmin = true;
             admin.membership = 'vip';
             admin.membershipApproved = true;
             await admin.save();
-            console.log(`Admin account verified: ${admin.email} (ID: ${admin.userId})`);
+            console.log(`Admin account verified/reset: ${admin.email} (ID: ${admin.userId})`);
         }
     } catch (error) {
         console.error('FATAL ERROR during admin seeding:', error);
