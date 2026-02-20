@@ -38,8 +38,16 @@ router.post('/send-otp', async (req, res) => {
             }
         }
 
-        const otp = await sendOTP(target, type);
-        res.json({ message: `OTP sent to ${type}` });
+        const { otp, sent } = await sendOTP(target, type);
+
+        if (!sent) {
+            return res.status(400).json({
+                message: `Failed to send real ${type}. Services might be unconfigured on Render.`,
+                success: false
+            });
+        }
+
+        res.json({ message: `OTP sent to ${type}`, success: true });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

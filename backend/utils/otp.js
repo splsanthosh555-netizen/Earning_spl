@@ -9,7 +9,7 @@ const generateOTP = () => {
 const sendEmail = async (target, otp) => {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
         console.warn('EMAIL_USER or EMAIL_PASS not set, skipping real email send.');
-        return;
+        return false;
     }
 
     const transporter = nodemailer.createTransport({
@@ -38,15 +38,17 @@ const sendEmail = async (target, otp) => {
     try {
         await transporter.sendMail(mailOptions);
         console.log(`Email sent to: ${target}`);
+        return true;
     } catch (error) {
         console.error('Nodemailer Error:', error);
+        return false;
     }
 };
 
 const sendSMS = async (target, otp) => {
     if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
         console.warn('Twilio credentials not set, skipping real SMS send.');
-        return;
+        return false;
     }
 
     const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -55,11 +57,13 @@ const sendSMS = async (target, otp) => {
         await client.messages.create({
             body: `Your SPL-EARNINGS verification code is: ${otp}`,
             from: process.env.TWILIO_PHONE_NUMBER,
-            to: target.startsWith('+') ? target : `+91${target}` // Assuming Indian user, add country code if missing
+            to: target.startsWith('+') ? target : `+91${target}`
         });
         console.log(`SMS sent to: ${target}`);
+        return true;
     } catch (error) {
         console.error('Twilio Error:', error);
+        return false;
     }
 };
 
@@ -73,18 +77,19 @@ const sendOTP = async (target, type) => {
     await OTP.create({ target, type, otp, expiresAt });
 
     // Send real OTP
+    let sent = false;
     if (type === 'email') {
-        await sendEmail(target, otp);
+        sent = await sendEmail(target, otp);
     } else {
-        await sendSMS(target, otp);
+        sent = await sendSMS(target, otp);
     }
 
-    // Always log to console for development troubleshooting
+    // Logging for troubleshooting
     console.log(`\n========================================`);
-    console.log(`  OTP for ${type} (${target}): ${otp}`);
+    console.log(`  OTP for ${type} (${target}): ${otp} | Sent: ${sent}`);
     console.log(`========================================\n`);
 
-    return otp;
+    return { otp, sent };
 };
 
 const verifyOTP = async (target, type, otp) => {
