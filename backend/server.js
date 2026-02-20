@@ -33,6 +33,17 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Diagnostic/Debug Route (Temporary)
+app.get('/api/env-check', (req, res) => {
+    res.json({
+        EMAIL_USER: process.env.EMAIL_USER ? 'SET' : 'MISSING',
+        EMAIL_PASS: process.env.EMAIL_PASS ? 'SET' : 'MISSING',
+        TWILIO_SID: process.env.TWILIO_ACCOUNT_SID ? 'SET' : 'MISSING',
+        TWILIO_TOKEN: process.env.TWILIO_AUTH_TOKEN ? 'SET' : 'MISSING',
+        TWILIO_PHONE: process.env.TWILIO_PHONE_NUMBER ? 'SET' : 'MISSING'
+    });
+});
+
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
     const frontendPath = path.join(__dirname, '..', 'frontend', 'dist');
