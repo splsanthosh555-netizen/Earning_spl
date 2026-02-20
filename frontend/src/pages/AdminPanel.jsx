@@ -57,13 +57,22 @@ export default function AdminPanel() {
         setLoading(false);
     };
 
-    const approveWithdrawal = async (txId, action) => {
+    const approveWithdrawal = async (transactionId, action) => {
+        const note = window.prompt(`Enter a note for this ${action}:`) || '';
+        if (action === 'reject' && !note) {
+            return toast.error('Please provide a reason for rejection.');
+        }
+
+        if (!window.confirm(`Are you sure you want to ${action} this ₹ withdrawal?`)) return;
+
         setLoading(true);
         try {
-            await API.post('/admin/approve-withdrawal', { transactionId: txId, action });
-            toast.success(`Withdrawal ${action}d`);
+            await API.post('/admin/approve-withdrawal', { transactionId, action, adminNote: note });
+            toast.success(`Withdrawal ${action === 'approve' ? 'approved' : 'rejected'}`);
             loadTabData('approvals');
-        } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Action failed');
+        }
         setLoading(false);
     };
 

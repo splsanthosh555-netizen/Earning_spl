@@ -141,9 +141,16 @@ router.post('/approve-membership', protect, adminOnly, async (req, res) => {
 // POST /api/admin/approve-withdrawal
 router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
     try {
-        const { transactionId, action } = req.body;
+        const { transactionId, action, adminNote } = req.body;
+        const AuditLog = require('../models/AuditLog');
+
         const transaction = await Transaction.findById(transactionId);
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
+
+        // STRICT CHECK: Prevent double processing
+        if (transaction.status !== 'pending') {
+            return res.status(400).json({ message: `Transaction already processed (Current Status: ${transaction.status})` });
+        }
 
         if (action === 'approve') {
             const user = await User.findOne({ userId: transaction.userId });
@@ -158,42 +165,61 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 process.env.RAZORPAYX_KEY_ID !== 'rzp_test_placeholder' &&
                 !process.env.RAZORPAYX_KEY_ID.includes('placeholder');
 
+            let payoutId = 'MANUAL';
+
             if (isRazorpayConfigured) {
-                // Attempt Automated Payout via RazorpayX
                 try {
                     const { createPayout } = require('../utils/payouts');
                     const payout = await createPayout(user, bankDetails, transaction.amount);
-                    console.log('Payout initiated:', payout.id);
-
-                    transaction.status = 'approved';
-                    transaction.description += ` (Payout: ${payout.id})`;
-                    await transaction.save();
-
-                    return res.json({ message: 'Withdrawal approved and automated payout initiated!', payoutId: payout.id });
+                    payoutId = payout.id;
+                    transaction.description += ` (Auto Payout: ${payoutId})`;
                 } catch (payoutError) {
-                    console.error('Automated Payout Failed:', payoutError.message);
                     return res.status(500).json({
-                        message: 'Automated payout system error. Please try manual payout.',
+                        message: 'Automated payout failed. Please transfer manually or check Razorpay setup.',
                         error: payoutError.message
                     });
                 }
             } else {
-                // MANUAL MODE: Just approve the transaction in DB
-                transaction.status = 'approved';
-                transaction.description += ' (Manual Payout)';
-                await transaction.save();
-                return res.json({ message: 'Withdrawal approved (Manual Payout mode)' });
+                transaction.description += ' (Manual Payout Verified)';
             }
+
+            transaction.status = 'approved';
+            await transaction.save();
+
+            // Log the action for strict auditing
+            await AuditLog.create({
+                adminId: req.user.userId,
+                adminEmail: req.user.email,
+                action: 'approve_withdrawal',
+                targetId: transactionId,
+                details: `Approved ₹${transaction.amount} for user ${transaction.userId}. PayoutID: ${payoutId}. Note: ${adminNote || 'None'}`,
+                ipAddress: req.ip
+            });
+
+            return res.json({ message: 'Withdrawal approved successfully.', payoutId });
         } else {
             // Reject - refund amount back to user wallet
             transaction.status = 'rejected';
+            transaction.description += ` (Rejected: ${adminNote || 'No reason provided'})`;
             await transaction.save();
+
             const user = await User.findOne({ userId: transaction.userId });
             if (user) {
                 user.walletBalance += transaction.amount;
                 await user.save();
             }
-            res.json({ message: 'Withdrawal rejected, amount refunded' });
+
+            // Log for auditing
+            await AuditLog.create({
+                adminId: req.user.userId,
+                adminEmail: req.user.email,
+                action: 'reject_withdrawal',
+                targetId: transactionId,
+                details: `Rejected ₹${transaction.amount} for user ${transaction.userId}. Reason: ${adminNote || 'None'}`,
+                ipAddress: req.ip
+            });
+
+            res.json({ message: 'Withdrawal rejected and refunded.' });
         }
     } catch (error) {
         res.status(500).json({ message: error.message });
