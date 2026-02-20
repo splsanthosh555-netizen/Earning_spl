@@ -1,81 +1,36 @@
-const express = require('express');
-const { sendOTP, verifyOTP } = require('../utils/otp');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const router = express.Router();
-
-// ==============================
-// SEND OTP
-// ==============================
-router.post('/send-otp', async (req, res) => {
+const protect = async (req, res, next) => {
     try {
-        const { target, type } = req.body;
+        let token;
 
-        if (!target || !type) {
-            return res.status(400).json({
-                message: 'Target and type are required'
-            });
+        if (
+            req.headers.authorization &&
+            req.headers.authorization.startsWith('Bearer')
+        ) {
+            token = req.headers.authorization.split(' ')[1];
         }
 
-        if (type !== 'email' && type !== 'phone') {
-            return res.status(400).json({
-                message: 'Type must be email or phone'
-            });
+        if (!token) {
+            return res.status(401).json({ message: 'Not authorized, no token' });
         }
 
-        const result = await sendOTP(target, type);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        if (!result.sent) {
-            return res.status(400).json({
-                message: `Failed to send real ${type}`,
-                success: false
-            });
+        const user = await User.findOne({ userId: decoded.userId }).select('-password');
+
+        if (!user) {
+            return res.status(401).json({ message: 'User not found' });
         }
 
-        return res.json({
-            message: `OTP sent to ${type}`,
-            success: true
-        });
+        req.user = user;
+        next();
 
     } catch (error) {
-        console.error('Send OTP Error:', error);
-        return res.status(500).json({
-            message: 'Internal server error'
-        });
+        console.error('Auth Error:', error);
+        return res.status(401).json({ message: 'Not authorized' });
     }
-});
+};
 
-// ==============================
-// VERIFY OTP
-// ==============================
-router.post('/verify-otp', async (req, res) => {
-    try {
-        const { target, type, otp } = req.body;
-
-        if (!target || !type || !otp) {
-            return res.status(400).json({
-                message: 'Target, type and otp are required'
-            });
-        }
-
-        const verified = await verifyOTP(target, type, otp);
-
-        if (!verified) {
-            return res.status(400).json({
-                message: 'Invalid or expired OTP'
-            });
-        }
-
-        return res.json({
-            message: 'OTP verified successfully',
-            verified: true
-        });
-
-    } catch (error) {
-        console.error('Verify OTP Error:', error);
-        return res.status(500).json({
-            message: 'Internal server error'
-        });
-    }
-});
-
-module.exports = router;
+module.exports = { protect };
