@@ -1,7 +1,4 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const Counter = require('../models/Counter');
 const { sendOTP, verifyOTP } = require('../utils/otp');
 
 const router = express.Router();
@@ -14,26 +11,36 @@ router.post('/send-otp', async (req, res) => {
         const { target, type } = req.body;
 
         if (!target || !type) {
-            return res.status(400).json({ message: 'Target and type required' });
+            return res.status(400).json({
+                message: 'Target and type are required'
+            });
         }
 
-        const { sent } = await sendOTP(target, type);
+        if (type !== 'email' && type !== 'phone') {
+            return res.status(400).json({
+                message: 'Type must be email or phone'
+            });
+        }
 
-        if (!sent) {
+        const result = await sendOTP(target, type);
+
+        if (!result.sent) {
             return res.status(400).json({
                 message: `Failed to send real ${type}`,
                 success: false
             });
         }
 
-        res.json({
+        return res.json({
             message: `OTP sent to ${type}`,
             success: true
         });
 
     } catch (error) {
-        console.error("Send OTP Error:", error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Send OTP Error:', error);
+        return res.status(500).json({
+            message: 'Internal server error'
+        });
     }
 });
 
@@ -44,6 +51,12 @@ router.post('/verify-otp', async (req, res) => {
     try {
         const { target, type, otp } = req.body;
 
+        if (!target || !type || !otp) {
+            return res.status(400).json({
+                message: 'Target, type and otp are required'
+            });
+        }
+
         const verified = await verifyOTP(target, type, otp);
 
         if (!verified) {
@@ -52,14 +65,16 @@ router.post('/verify-otp', async (req, res) => {
             });
         }
 
-        res.json({
+        return res.json({
             message: 'OTP verified successfully',
             verified: true
         });
 
     } catch (error) {
-        console.error("Verify OTP Error:", error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Verify OTP Error:', error);
+        return res.status(500).json({
+            message: 'Internal server error'
+        });
     }
 });
 
