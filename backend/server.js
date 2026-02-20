@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const axios = require('axios'); // ✅ Added for IP check
 const connectDB = require('./config/db');
 const User = require('./models/User');
 const Counter = require('./models/Counter');
@@ -20,7 +21,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// DEBUG: Log all requests to see if they are reaching the server
+// DEBUG: Log all requests
 app.use((req, res, next) => {
     console.log(`[REQUEST] ${req.method} ${req.url}`);
     next();
@@ -39,7 +40,7 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Diagnostic/Debug Route (Temporary)
+// Diagnostic Route
 app.get('/api/env-check', (req, res) => {
     res.json({
         EMAIL_USER: process.env.EMAIL_USER ? 'SET' : 'MISSING',
@@ -51,13 +52,6 @@ app.get('/api/env-check', (req, res) => {
 });
 
 // Serve frontend in production
-if (process.env.NODE_ENV === 'production') {
-    const frontendPath = path.join(__dirname, '..', 'frontend', 'dist');
-    app.use(express.static(frontendPath));
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(frontendPath, 'index.html'));
-    });
-}
 
 // Seed admin user
 const seedAdmin = async () => {
@@ -65,11 +59,10 @@ const seedAdmin = async () => {
         const adminEmail = 'splsanthosh555@gmail.com';
         const adminPass = '010504spl';
 
-        // 1. Try to find user by email first (regardless of isAdmin status)
         let admin = await User.findOne({ email: adminEmail });
 
         if (!admin) {
-            console.log('No user found with admin email, creating new admin account...');
+            console.log('Creating new admin account...');
             await Counter.findByIdAndUpdate(
                 'userId',
                 { seq: 1135839 },
@@ -90,38 +83,45 @@ const seedAdmin = async () => {
                 isAdmin: true,
                 isActive: true
             });
-            console.log(`Admin user created: ${admin.email} (ID: ${admin.userId})`);
+
+            console.log(`Admin user created: ${admin.email}`);
         } else {
-            console.log('User with admin email found, ensuring credentials and admin status...');
-            admin.password = adminPass; // Force reset to default for recovery
+            console.log('Admin exists, resetting credentials...');
+            admin.password = adminPass;
             admin.isAdmin = true;
             admin.membership = 'vip';
             admin.membershipApproved = true;
             await admin.save();
 
-            // TEMPORARY: Reset balance for testing (Remove after testing)
             admin.walletBalance = admin.totalEarnings;
             await admin.save();
+
             const Transaction = require('./models/Transaction');
             await Transaction.deleteMany({ userId: admin.userId, type: 'withdrawal' });
 
-            console.log(`Admin account verified/reset: ${admin.email} (ID: ${admin.userId})`);
+            console.log(`Admin account verified/reset: ${admin.email}`);
         }
     } catch (error) {
-        console.error('FATAL ERROR during admin seeding:', error);
+        console.error('Admin seeding error:', error);
     }
 };
 
-// Start
+// Start server
 const PORT = process.env.PORT || 5000;
+
 connectDB().then(() => {
     seedAdmin();
 }).catch(err => {
-    console.error('Database connection failed, but starting server for UI preview...');
+    console.error('Database connection failed, but server will still start.');
 });
 
 app.listen(PORT, () => {
     console.log(`\n🚀 SPL-Earnings running on port ${PORT}`);
-    console.log(`   Mode: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`   API: http://localhost:${PORT}/api/health\n`);
+    console.log(`Mode: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`API: http://localhost:${PORT}/api/health\n`);
+
+    // 🔥 TEMP: Get Render Public IP
+    axios.get("https://api.ipify.org?format=json")
+        .then(res => console.log("🌍 Render Public IP:", res.data.ip))
+        .catch(err => console.log("IP Fetch Error:", err.message));
 });

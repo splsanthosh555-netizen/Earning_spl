@@ -1,102 +1,107 @@
-const nodemailer = require('nodemailer');
-const twilio = require('twilio');
+const crypto = require('crypto');
+const axios = require('axios');
+const sgMail = require('@sendgrid/mail');
 const OTP = require('../models/OTP');
 
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+// 🔢 Generate 6-digit OTP
 const generateOTP = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
+// 🔐 Hash OTP before storing
+const hashOTP = (otp) => {
+    return crypto.createHash('sha256').update(otp).digest('hex');
+};
+
+// 📧 Send Email using SendGrid
 const sendEmail = async (target, otp) => {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.warn('EMAIL_USER or EMAIL_PASS not set, skipping real email send.');
-        return false;
-    }
-
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-        }
-    });
-
-    const mailOptions = {
-        from: `"SPL-EARNINGS" <${process.env.EMAIL_USER}>`,
-        to: target,
-        subject: 'Your SPL-EARNINGS Verification Code',
-        text: `Your verification code is: ${otp}. This code expires in 10 minutes.`,
-        html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px; max-width: 500px;">
-                <h2 style="color: #7c3aed;">SPL-EARNINGS Verification</h2>
-                <p>Use the following code to verify your identity:</p>
-                <div style="font-size: 32px; font-weight: bold; color: #7c3aed; letter-spacing: 5px; margin: 20px 0;">${otp}</div>
-                <p style="color: #666; font-size: 12px;">This code will expire in 10 minutes. If you didn't request this, please ignore this email.</p>
-            </div>
-        `
-    };
-
     try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Email sent to: ${target}`);
+        const message = {
+            to: target,
+            from: 'no-reply@earningspl.com',
+            subject: 'SPL Earnings Verification Code',
+            html: `
+                <div style="font-family: Arial; padding: 20px;">
+                    <h2>SPL Earnings Verification</h2>
+                    <p>Your OTP is:</p>
+                    <h1 style="letter-spacing: 5px;">${otp}</h1>
+                    <p>This code expires in 5 minutes.</p>
+                </div>
+            `
+        };
+
+        await sgMail.send(message);
         return true;
     } catch (error) {
-        console.error('Nodemailer Error:', error);
+        console.error("SendGrid Error:", error.response?.body || error.message);
         return false;
     }
 };
 
+// 📱 Send SMS using MSG91
 const sendSMS = async (target, otp) => {
-    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
-        console.warn('Twilio credentials not set, skipping real SMS send.');
-        return false;
-    }
-
-    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-
     try {
-        await client.messages.create({
-            body: `Your SPL-EARNINGS verification code is: ${otp}`,
-            from: process.env.TWILIO_PHONE_NUMBER,
-            to: target.startsWith('+') ? target : `+91${target}`
-        });
-        console.log(`SMS sent to: ${target}`);
+        await axios.get(
+            `https://api.msg91.com/api/v5/otp`,
+            {
+                params: {
+                    template_id: process.env.MSG91_TEMPLATE_ID,
+                    mobile: `91${target}`,
+                    authkey: process.env.MSG91_AUTHKEY,
+                    otp: otp
+                }
+            }
+        );
+
         return true;
     } catch (error) {
-        console.error('Twilio Error:', error);
+        console.error("MSG91 Error:", error.response?.data || error.message);
         return false;
     }
 };
 
+// 🔥 Main Send OTP Function
 const sendOTP = async (target, type) => {
-    // Delete any existing OTPs for this target
+
     await OTP.deleteMany({ target, type });
 
     const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const hashedOTP = hashOTP(otp);
 
-    await OTP.create({ target, type, otp, expiresAt });
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    // Send real OTP
+    await OTP.create({
+        target,
+        type,
+        otp: hashedOTP,
+        expiresAt,
+        verified: false
+    });
+
     let sent = false;
+
     if (type === 'email') {
         sent = await sendEmail(target, otp);
-    } else {
+    } else if (type === 'phone') {
         sent = await sendSMS(target, otp);
     }
 
-    // Logging for troubleshooting
-    console.log(`\n========================================`);
-    console.log(`  OTP for ${type} (${target}): ${otp} | Sent: ${sent}`);
-    console.log(`========================================\n`);
+    console.log(`OTP for ${type} (${target}) Sent: ${sent}`);
 
-    return { otp, sent };
+    return { sent };
 };
 
+// 🔎 Verify OTP
 const verifyOTP = async (target, type, otp) => {
+
+    const hashedOTP = hashOTP(otp);
+
     const otpRecord = await OTP.findOne({
         target,
         type,
-        otp,
+        otp: hashedOTP,
         verified: false,
         expiresAt: { $gt: new Date() }
     });
@@ -105,17 +110,8 @@ const verifyOTP = async (target, type, otp) => {
 
     otpRecord.verified = true;
     await otpRecord.save();
+
     return true;
 };
 
-const isOTPVerified = async (target, type) => {
-    const otpRecord = await OTP.findOne({
-        target,
-        type,
-        verified: true,
-        expiresAt: { $gt: new Date() }
-    });
-    return !!otpRecord;
-};
-
-module.exports = { sendOTP, verifyOTP, isOTPVerified };
+module.exports = { sendOTP, verifyOTP };

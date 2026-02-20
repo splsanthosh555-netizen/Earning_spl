@@ -1,35 +1,94 @@
+const express = require('express');
+const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const protect = async (req, res, next) => {
-    let token;
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        try {
-            token = req.headers.authorization.split(' ')[1];
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            req.user = await User.findOne({ userId: decoded.userId }).select('-password');
-            if (!req.user) {
-                return res.status(401).json({ message: 'User not found' });
-            }
-            // Update last active date
-            req.user.lastActiveDate = new Date();
-            await req.user.save();
-            next();
-        } catch (error) {
-            return res.status(401).json({ message: 'Not authorized, token invalid' });
+const { generateOTP, hashOTP } = require('../utils/otpService');
+const sendEmailOTP = require('../utils/emailService');
+const sendPhoneOTP = require('../utils/phoneService');
+
+// 🔥 SEND OTP
+router.post('/send-otp', async (req, res) => {
+    try {
+        const { email, phone } = req.body;
+
+        const emailOTP = generateOTP();
+        const phoneOTP = generateOTP();
+
+        const hashedEmailOTP = hashOTP(emailOTP);
+        const hashedPhoneOTP = hashOTP(phoneOTP);
+
+        const expiry = new Date(Date.now() + 5 * 60 * 1000);
+
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            user = await User.create({
+                email,
+                phone
+            });
         }
-    }
-    if (!token) {
-        return res.status(401).json({ message: 'Not authorized, no token' });
-    }
-};
 
-const adminOnly = (req, res, next) => {
-    if (req.user && req.user.isAdmin) {
-        next();
-    } else {
-        res.status(403).json({ message: 'Admin access only' });
-    }
-};
+        user.emailOTP = hashedEmailOTP;
+        user.phoneOTP = hashedPhoneOTP;
+        user.emailOTPExpires = expiry;
+        user.phoneOTPExpires = expiry;
+        await user.save();
 
-module.exports = { protect, adminOnly };
+        await sendEmailOTP(email, emailOTP);
+        await sendPhoneOTP(phone, phoneOTP);
+
+        res.json({ message: 'OTP sent successfully' });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'OTP sending failed' });
+    }
+});
+
+// 🔥 VERIFY OTP
+router.post('/verify-otp', async (req, res) => {
+    try {
+        const { email, emailOTP, phoneOTP } = req.body;
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(400).json({ message: 'User not found' });
+        }
+
+        if (
+            user.emailOTPExpires < new Date() ||
+            user.phoneOTPExpires < new Date()
+        ) {
+            return res.status(400).json({ message: 'OTP expired' });
+        }
+
+        if (
+            hashOTP(emailOTP) !== user.emailOTP ||
+            hashOTP(phoneOTP) !== user.phoneOTP
+        ) {
+            return res.status(400).json({ message: 'Invalid OTP' });
+        }
+
+        user.isEmailVerified = true;
+        user.isPhoneVerified = true;
+        user.emailOTP = undefined;
+        user.phoneOTP = undefined;
+        await user.save();
+
+        const token = jwt.sign(
+            { userId: user.userId },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.json({ message: 'Verification successful', token });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Verification failed' });
+    }
+});
+
+module.exports = router;
