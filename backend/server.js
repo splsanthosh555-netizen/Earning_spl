@@ -20,6 +20,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// DEBUG: Log all requests to see if they are reaching the server
+app.use((req, res, next) => {
+    console.log(`[REQUEST] ${req.method} ${req.url}`);
+    next();
+});
+
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/user', require('./routes/user'));
