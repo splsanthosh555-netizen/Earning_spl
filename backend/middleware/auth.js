@@ -3,91 +3,63 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Counter = require('../models/Counter');
 const { sendOTP, verifyOTP } = require('../utils/otp');
-const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
-// 🔥 SEND OTP
+// ==============================
+// SEND OTP
+// ==============================
 router.post('/send-otp', async (req, res) => {
     try {
-        const { email, phone } = req.body;
+        const { target, type } = req.body;
 
-        const emailOTP = generateOTP();
-        const phoneOTP = generateOTP();
+        if (!target || !type) {
+            return res.status(400).json({ message: 'Target and type required' });
+        }
 
-        const hashedEmailOTP = hashOTP(emailOTP);
-        const hashedPhoneOTP = hashOTP(phoneOTP);
+        const { sent } = await sendOTP(target, type);
 
-        const expiry = new Date(Date.now() + 5 * 60 * 1000);
-
-        let user = await User.findOne({ email });
-
-        if (!user) {
-            user = await User.create({
-                email,
-                phone
+        if (!sent) {
+            return res.status(400).json({
+                message: `Failed to send real ${type}`,
+                success: false
             });
         }
 
-        user.emailOTP = hashedEmailOTP;
-        user.phoneOTP = hashedPhoneOTP;
-        user.emailOTPExpires = expiry;
-        user.phoneOTPExpires = expiry;
-        await user.save();
-
-        await sendEmailOTP(email, emailOTP);
-        await sendPhoneOTP(phone, phoneOTP);
-
-        res.json({ message: 'OTP sent successfully' });
+        res.json({
+            message: `OTP sent to ${type}`,
+            success: true
+        });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'OTP sending failed' });
+        console.error("Send OTP Error:", error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
-// 🔥 VERIFY OTP
+// ==============================
+// VERIFY OTP
+// ==============================
 router.post('/verify-otp', async (req, res) => {
     try {
-        const { email, emailOTP, phoneOTP } = req.body;
+        const { target, type, otp } = req.body;
 
-        const user = await User.findOne({ email });
+        const verified = await verifyOTP(target, type, otp);
 
-        if (!user) {
-            return res.status(400).json({ message: 'User not found' });
+        if (!verified) {
+            return res.status(400).json({
+                message: 'Invalid or expired OTP'
+            });
         }
 
-        if (
-            user.emailOTPExpires < new Date() ||
-            user.phoneOTPExpires < new Date()
-        ) {
-            return res.status(400).json({ message: 'OTP expired' });
-        }
-
-        if (
-            hashOTP(emailOTP) !== user.emailOTP ||
-            hashOTP(phoneOTP) !== user.phoneOTP
-        ) {
-            return res.status(400).json({ message: 'Invalid OTP' });
-        }
-
-        user.isEmailVerified = true;
-        user.isPhoneVerified = true;
-        user.emailOTP = undefined;
-        user.phoneOTP = undefined;
-        await user.save();
-
-        const token = jwt.sign(
-            { userId: user.userId },
-            process.env.JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        res.json({ message: 'Verification successful', token });
+        res.json({
+            message: 'OTP verified successfully',
+            verified: true
+        });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Verification failed' });
+        console.error("Verify OTP Error:", error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
