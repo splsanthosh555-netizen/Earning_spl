@@ -153,25 +153,36 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 return res.status(400).json({ message: 'User or Bank Details missing' });
             }
 
-            // Attempt Automated Payout via RazorpayX
-            try {
-                const { createPayout } = require('../utils/payouts');
-                // In production, this will use the real keys. In test mode, it uses dummy keys.
-                const payout = await createPayout(user, bankDetails, transaction.amount);
-                console.log('Payout initiated:', payout.id);
+            // Check if RazorpayX is configured
+            const isRazorpayConfigured = process.env.RAZORPAYX_KEY_ID &&
+                process.env.RAZORPAYX_KEY_ID !== 'rzp_test_placeholder' &&
+                !process.env.RAZORPAYX_KEY_ID.includes('placeholder');
 
+            if (isRazorpayConfigured) {
+                // Attempt Automated Payout via RazorpayX
+                try {
+                    const { createPayout } = require('../utils/payouts');
+                    const payout = await createPayout(user, bankDetails, transaction.amount);
+                    console.log('Payout initiated:', payout.id);
+
+                    transaction.status = 'approved';
+                    transaction.description += ` (Payout: ${payout.id})`;
+                    await transaction.save();
+
+                    return res.json({ message: 'Withdrawal approved and automated payout initiated!', payoutId: payout.id });
+                } catch (payoutError) {
+                    console.error('Automated Payout Failed:', payoutError.message);
+                    return res.status(500).json({
+                        message: 'Automated payout system error. Please try manual payout.',
+                        error: payoutError.message
+                    });
+                }
+            } else {
+                // MANUAL MODE: Just approve the transaction in DB
                 transaction.status = 'approved';
-                transaction.description += ` (Payout: ${payout.id})`;
+                transaction.description += ' (Manual Payout)';
                 await transaction.save();
-
-                res.json({ message: 'Withdrawal approved and payout initiated!', payoutId: payout.id });
-            } catch (payoutError) {
-                console.error('Automated Payout Failed:', payoutError.message);
-                // Even if automated fails, we might want to allow manual or just error out
-                return res.status(500).json({
-                    message: 'Automated payout system error. Please try manual payout.',
-                    error: payoutError.message
-                });
+                return res.json({ message: 'Withdrawal approved (Manual Payout mode)' });
             }
         } else {
             // Reject - refund amount back to user wallet
