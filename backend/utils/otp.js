@@ -1,75 +1,69 @@
 const crypto = require('crypto');
 const axios = require('axios');
-const sgMail = require('@sendgrid/mail');
+const { Resend } = require('resend');
 const OTP = require('../models/OTP');
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// 🔢 Generate 6-digit OTP
+// Generate 6 digit OTP
 const generateOTP = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// 🔐 Hash OTP before storing
+// Hash OTP
 const hashOTP = (otp) => {
     return crypto.createHash('sha256').update(otp).digest('hex');
 };
 
-// 📧 Send Email using SendGrid
-const sendEmail = async (target, otp) => {
+// Send Email via Resend
+const sendEmail = async (email, otp) => {
     try {
-        const message = {
-            to: target,
-            from: 'no-reply@earningspl.com',
-            subject: 'SPL Earnings Verification Code',
+        await resend.emails.send({
+            from: 'onboarding@resend.dev',
+            to: email,
+            subject: 'SPL Earnings OTP Verification',
             html: `
-                <div style="font-family: Arial; padding: 20px;">
-                    <h2>SPL Earnings Verification</h2>
-                    <p>Your OTP is:</p>
-                    <h1 style="letter-spacing: 5px;">${otp}</h1>
-                    <p>This code expires in 5 minutes.</p>
-                </div>
+                <h2>Your OTP is ${otp}</h2>
+                <p>This OTP expires in 5 minutes.</p>
             `
-        };
+        });
 
-        await sgMail.send(message);
         return true;
     } catch (error) {
-        console.error("SendGrid Error:", error.response?.body || error.message);
+        console.error("Resend Error:", error.message);
         return false;
     }
 };
 
-// 📱 Send SMS using MSG91
-const sendSMS = async (target, otp) => {
+// Send SMS via Fast2SMS
+const sendSMS = async (phone, otp) => {
     try {
-        await axios.get(
-            `https://api.msg91.com/api/v5/otp`,
+        const response = await axios.get(
+            'https://www.fast2sms.com/dev/otp',
             {
                 params: {
-                    template_id: process.env.MSG91_TEMPLATE_ID,
-                    mobile: `91${target}`,
-                    authkey: process.env.MSG91_AUTHKEY,
-                    otp: otp
+                    authorization: process.env.FAST2SMS_API_KEY,
+                    route: 'otp',
+                    variables_values: otp,
+                    numbers: phone
                 }
             }
         );
 
-        return true;
+        return response.data.return === true;
     } catch (error) {
-        console.error("MSG91 Error:", error.response?.data || error.message);
+        console.error("Fast2SMS Error:", error.response?.data || error.message);
         return false;
     }
 };
 
-// 🔥 Main Send OTP Function
+// Main Send OTP
 const sendOTP = async (target, type) => {
 
     await OTP.deleteMany({ target, type });
 
     const otp = generateOTP();
     const hashedOTP = hashOTP(otp);
-
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     await OTP.create({
@@ -89,11 +83,10 @@ const sendOTP = async (target, type) => {
     }
 
     console.log(`OTP for ${type} (${target}) Sent: ${sent}`);
-
     return { sent };
 };
 
-// 🔎 Verify OTP
+// Verify OTP
 const verifyOTP = async (target, type, otp) => {
 
     const hashedOTP = hashOTP(otp);

@@ -1,11 +1,11 @@
 const express = require('express');
-const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Counter = require('../models/Counter');
+const { sendOTP, verifyOTP } = require('../utils/otp');
+const { protect } = require('../middleware/auth');
 
-const { generateOTP, hashOTP } = require('../utils/otpService');
-const sendEmailOTP = require('../utils/emailService');
-const sendPhoneOTP = require('../utils/phoneService');
+const router = express.Router();
 
 // 🔥 SEND OTP
 router.post('/send-otp', async (req, res) => {
