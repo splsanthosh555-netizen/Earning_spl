@@ -169,7 +169,6 @@ router.post('/register', async (req, res) => {
     }
 });
 
-
 // ======================================
 // LOGIN
 // ======================================
@@ -185,21 +184,29 @@ router.post('/login', async (req, res) => {
 
         let user;
 
-        if (userId.includes('@')) {
-            user = await User.findOne({ email: userId.toLowerCase() });
-        } else {
-            user = await User.findOne({ userId: parseInt(userId) });
+        // Always convert to string first
+        const loginInput = String(userId).trim();
+
+        // Login by email
+        if (loginInput.includes('@')) {
+            user = await User.findOne({ email: loginInput.toLowerCase() });
+        }
+        // Login by userId number
+        else {
+            user = await User.findOne({ userId: Number(loginInput) });
         }
 
         if (!user) {
+            console.log("❌ User not found");
             return res.status(401).json({
-                message: 'User not found'
+                message: 'Invalid credentials'
             });
         }
 
         const isMatch = await user.matchPassword(password);
 
         if (!isMatch) {
+            console.log("❌ Password incorrect");
             return res.status(401).json({
                 message: 'Invalid credentials'
             });
@@ -210,6 +217,8 @@ router.post('/login', async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
+
+        console.log("✅ Login successful");
 
         res.json({
             token,
@@ -223,5 +232,3 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
-
-module.exports = router;
