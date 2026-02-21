@@ -3,7 +3,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const API = axios.create({
-    baseURL: '/api',
+    baseURL: import.meta.env.VITE_API_URL || 'https://earningspl.com/api/auth/login',
     timeout: 60000
 });
 
