@@ -22,9 +22,11 @@ router.post('/send-otp', async (req, res) => {
             return res.status(400).json({ message: 'Only email OTP supported' });
         }
 
+        const cleanEmail = target.trim().toLowerCase();
+
         // Check if already registered
         if (purpose === 'register') {
-            const existing = await User.findOne({ email: target.toLowerCase() });
+            const existing = await User.findOne({ email: cleanEmail });
             if (existing) {
                 return res.status(400).json({
                     message: 'Email already registered'
@@ -32,7 +34,7 @@ router.post('/send-otp', async (req, res) => {
             }
         }
 
-        const result = await sendOTP(target, 'email');
+        const result = await sendOTP(cleanEmail, 'email');
 
         if (!result.sent) {
             return res.status(500).json({
@@ -65,7 +67,9 @@ router.post('/verify-otp', async (req, res) => {
             });
         }
 
-        const verified = await verifyOTP(target, 'email', otp);
+        const cleanEmail = target.trim().toLowerCase();
+
+        const verified = await verifyOTP(cleanEmail, 'email', otp);
 
         if (!verified) {
             return res.status(400).json({
@@ -101,7 +105,7 @@ router.post('/register', async (req, res) => {
             referralCode
         } = req.body;
 
-        if (!firstName || !lastName || !email || !phone || !password || !gender) {
+        if (!firstName || !lastName || !email || !phone || !password || !confirmPassword || !gender) {
             return res.status(400).json({
                 message: 'All required fields must be filled'
             });
@@ -119,37 +123,45 @@ router.post('/register', async (req, res) => {
             });
         }
 
-        // Check duplicates
-        const existingEmail = await User.findOne({ email: email.toLowerCase() });
+        const cleanEmail = email.trim().toLowerCase();
+        const cleanPhone = phone.trim();
+
+        // Check duplicate email
+        const existingEmail = await User.findOne({ email: cleanEmail });
         if (existingEmail) {
             return res.status(400).json({ message: 'Email already registered' });
         }
 
-        const existingPhone = await User.findOne({ phone });
+        // Check duplicate phone
+        const existingPhone = await User.findOne({ phone: cleanPhone });
         if (existingPhone) {
             return res.status(400).json({ message: 'Phone already registered' });
         }
 
-        // Generate auto userId
+        // Generate unique userId
         const counter = await Counter.findOneAndUpdate(
             { name: 'userId' },
             { $inc: { seq: 1 } },
             { new: true, upsert: true }
         );
 
-        // Create user
+        if (!counter) {
+            return res.status(500).json({
+                message: 'User ID generation failed'
+            });
+        }
+
         const newUser = await User.create({
             userId: counter.seq,
-            firstName,
-            lastName,
-            email: email.toLowerCase(),
-            phone,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email: cleanEmail,
+            phone: cleanPhone,
             password,
             gender,
-            referralCode: referralCode || null
+            referredBy: referralCode ? parseInt(referralCode) : null
         });
 
-        // Generate JWT
         const token = jwt.sign(
             { userId: newUser.userId },
             process.env.JWT_SECRET,
@@ -170,5 +182,59 @@ router.post('/register', async (req, res) => {
     }
 });
 
+
+// ======================================
+// LOGIN
+// ======================================
+router.post('/login', async (req, res) => {
+    try {
+        const { userId, password } = req.body;
+
+        if (!userId || !password) {
+            return res.status(400).json({
+                message: 'User ID and password required'
+            });
+        }
+
+        let user;
+
+        if (userId.includes('@')) {
+            user = await User.findOne({ email: userId.toLowerCase() });
+        } else {
+            user = await User.findOne({ userId: parseInt(userId) });
+        }
+
+        if (!user) {
+            return res.status(401).json({
+                message: 'User not found'
+            });
+        }
+
+        const isMatch = await user.matchPassword(password);
+
+        if (!isMatch) {
+            return res.status(401).json({
+                message: 'Invalid credentials'
+            });
+        }
+
+        const token = jwt.sign(
+            { userId: user.userId },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            token,
+            userId: user.userId,
+            firstName: user.firstName,
+            lastName: user.lastName
+        });
+
+    } catch (error) {
+        console.error("LOGIN ERROR:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 module.exports = router;
