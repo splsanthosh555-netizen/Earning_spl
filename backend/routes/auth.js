@@ -14,12 +14,10 @@ router.post('/send-otp', async (req, res) => {
     try {
         const { target, type, purpose } = req.body;
 
-        if (!target || !type) {
-            return res.status(400).json({ message: 'Target and type required' });
-        }
-
-        if (type !== 'email') {
-            return res.status(400).json({ message: 'Only email OTP supported' });
+        if (!target || type !== 'email') {
+            return res.status(400).json({
+                message: 'Valid email required'
+            });
         }
 
         const cleanEmail = target.trim().toLowerCase();
@@ -43,7 +41,7 @@ router.post('/send-otp', async (req, res) => {
         }
 
         res.json({
-            message: 'OTP sent to email',
+            message: 'OTP sent successfully',
             success: true
         });
 
@@ -55,7 +53,7 @@ router.post('/send-otp', async (req, res) => {
 
 
 // ======================================
-// VERIFY OTP (EMAIL ONLY)
+// VERIFY OTP
 // ======================================
 router.post('/verify-otp', async (req, res) => {
     try {
@@ -63,7 +61,7 @@ router.post('/verify-otp', async (req, res) => {
 
         if (!target || !otp) {
             return res.status(400).json({
-                message: 'Target and OTP required'
+                message: 'Email and OTP required'
             });
         }
 
@@ -107,7 +105,7 @@ router.post('/register', async (req, res) => {
 
         if (!firstName || !lastName || !email || !phone || !password || !confirmPassword || !gender) {
             return res.status(400).json({
-                message: 'All required fields must be filled'
+                message: 'All fields are required'
             });
         }
 
@@ -126,33 +124,22 @@ router.post('/register', async (req, res) => {
         const cleanEmail = email.trim().toLowerCase();
         const cleanPhone = phone.trim();
 
-        // Check duplicate email
+        // Duplicate checks
         const existingEmail = await User.findOne({ email: cleanEmail });
         if (existingEmail) {
             return res.status(400).json({ message: 'Email already registered' });
         }
 
-        // Check duplicate phone
         const existingPhone = await User.findOne({ phone: cleanPhone });
         if (existingPhone) {
             return res.status(400).json({ message: 'Phone already registered' });
         }
 
-        // Generate unique userId
-        const counter = await Counter.findOneAndUpdate(
-            { name: 'userId' },
-            { $inc: { seq: 1 } },
-            { new: true, upsert: true }
-        );
-
-        if (!counter) {
-            return res.status(500).json({
-                message: 'User ID generation failed'
-            });
-        }
+        // ✅ CORRECT USER ID GENERATION
+        const userId = await Counter.getNextUserId();
 
         const newUser = await User.create({
-            userId: counter.seq,
+            userId,
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             email: cleanEmail,
