@@ -1,26 +1,27 @@
-const axios = require('axios');
+const mongoose = require('mongoose');
 
-const sendPhoneOTP = async (phone, otp) => {
-    try {
-        const response = await axios.get(
-            'https://www.fast2sms.com/dev/otp',
-            {
-                params: {
-                    authorization: process.env.FAST2SMS_API_KEY,
-                    route: 'otp',
-                    variables_values: otp,
-                    numbers: phone
-                }
-            }
-        );
-
-        console.log("Fast2SMS:", response.data);
-        return response.data.return === true;
-
-    } catch (error) {
-        console.error("Fast2SMS Error:", error.response?.data || error.message);
-        return false;
+const otpSchema = new mongoose.Schema({
+    target: {
+        type: String,
+        required: true
+    },
+    type: {
+        type: String,
+        enum: ['email', 'phone'],
+        required: true
+    },
+    otp: {
+        type: String,
+        required: true
+    },
+    expiresAt: {
+        type: Date,
+        required: true
+    },
+    verified: {
+        type: Boolean,
+        default: false
     }
-};
+}, { timestamps: true });
 
-module.exports = sendPhoneOTP;
+module.exports = mongoose.model('OTP', otpSchema);
