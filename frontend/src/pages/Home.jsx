@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FiMenu, FiX, FiUser, FiLock, FiDollarSign, FiFileText, FiLogOut, FiCopy, FiShare2, FiUsers, FiLink, FiAward, FiTrendingUp, FiActivity, FiUserCheck, FiUserX, FiCalendar, FiCreditCard } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -16,11 +16,54 @@ export default function Home() {
     const [showIndirect, setShowIndirect] = useState(false);
     const [dashData, setDashData] = useState(null);
 
+    // Wallet & Withdraw state
+    const [earnings, setEarnings] = useState(null);
+    const [bankDetails, setBankDetails] = useState(null);
+    const [withdrawAmount, setWithdrawAmount] = useState('');
+    const [withdrawLoading, setWithdrawLoading] = useState(false);
+    const [recentWithdrawals, setRecentWithdrawals] = useState([]);
+
     useEffect(() => {
         refreshUser();
         fetchReferral();
         fetchDashboard();
+        fetchWalletData();
     }, []);
+
+    const fetchWalletData = async () => {
+        try {
+            const [earningsRes, bankRes, historyRes] = await Promise.all([
+                API.get('/earnings/total'),
+                API.get('/user/bank-details').catch(() => ({ data: null })),
+                API.get('/earnings/history')
+            ]);
+            setEarnings(earningsRes.data);
+            if (bankRes.data && (bankRes.data.accountNumber || bankRes.data.upiId)) {
+                setBankDetails(bankRes.data);
+            }
+            // Show only last 3 withdrawal transactions
+            const withdrawals = (historyRes.data || []).filter(t => t.type === 'withdrawal').slice(0, 3);
+            setRecentWithdrawals(withdrawals);
+        } catch (err) { }
+    };
+
+    const handleWithdraw = async () => {
+        const amount = parseFloat(withdrawAmount);
+        if (!amount || amount < 100) return toast.error('Minimum withdrawal is ₹100');
+        if (!bankDetails) return toast.error('Please add Bank/UPI details first');
+
+        setWithdrawLoading(true);
+        try {
+            await API.post('/earnings/withdraw', { amount });
+            toast.success('Withdrawal request submitted!');
+            setWithdrawAmount('');
+            fetchWalletData();
+            refreshUser();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Withdrawal failed');
+        }
+        setWithdrawLoading(false);
+    };
 
     const fetchReferral = async () => {
         try {
@@ -131,6 +174,12 @@ export default function Home() {
                         <div className="stat-card-value purple">₹{(user?.totalEarnings || 0).toFixed(2)}</div>
                     </div>
 
+                    {/* Wallet Balance */}
+                    <div className="stat-card" style={{ cursor: 'default' }}>
+                        <div className="stat-card-label">👛 Wallet Balance</div>
+                        <div className="stat-card-value cyan">₹{(earnings?.walletBalance || user?.walletBalance || 0).toFixed(2)}</div>
+                    </div>
+
                     {/* Membership */}
                     <div className="stat-card" onClick={() => navigate('/membership')} style={{ cursor: 'pointer' }}>
                         <div className="stat-card-label">Membership</div>
@@ -148,6 +197,143 @@ export default function Home() {
                         <div className="stat-card-label">Indirect Lines</div>
                         <div className="stat-card-value green">{user?.indirectReferralCount || 0}</div>
                     </div>
+                </div>
+
+                {/* ========== WALLET & WITHDRAW SECTION ========== */}
+                <div className="wallet-withdraw-section" style={{
+                    background: 'linear-gradient(135deg, rgba(34,211,238,0.08), rgba(168,85,247,0.08))',
+                    border: '1px solid rgba(34,211,238,0.2)',
+                    borderRadius: 16,
+                    padding: '24px',
+                    marginBottom: 24
+                }}>
+                    <h3 style={{
+                        fontSize: 18, fontWeight: 800, marginBottom: 16,
+                        fontFamily: 'var(--font-display)',
+                        display: 'flex', alignItems: 'center', gap: 8
+                    }}>
+                        <FiDollarSign /> Wallet & Withdraw
+                    </h3>
+
+                    {/* Wallet Balance Display */}
+                    <div style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: '16px 20px',
+                        marginBottom: 16, border: '1px solid rgba(255,255,255,0.06)'
+                    }}>
+                        <div>
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Available Balance</div>
+                            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--cyan-400)', fontFamily: 'var(--font-display)' }}>
+                                ₹{(earnings?.walletBalance || user?.walletBalance || 0).toFixed(2)}
+                            </div>
+                        </div>
+                        <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => navigate('/earnings')}
+                            style={{ whiteSpace: 'nowrap' }}
+                        >
+                            <FiTrendingUp /> View History
+                        </button>
+                    </div>
+
+                    {/* Bank/UPI Details */}
+                    {bankDetails ? (
+                        <div style={{
+                            fontSize: 13, color: 'var(--cyan-400)', marginBottom: 16,
+                            background: 'rgba(34, 211, 238, 0.08)', padding: '12px 16px',
+                            borderRadius: 10, border: '1px solid rgba(34, 211, 238, 0.15)'
+                        }}>
+                            <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: 11, marginBottom: 4 }}>
+                                💳 Withdrawal Destination:
+                            </span>
+                            <strong>{bankDetails.upiId ? `UPI: ${bankDetails.upiId}` : `${bankDetails.bankName} - A/C: ${bankDetails.accountNumber}`}</strong>
+                            <button
+                                onClick={() => navigate('/bank-details')}
+                                style={{
+                                    background: 'none', border: 'none', color: 'var(--purple-400)',
+                                    fontSize: 11, cursor: 'pointer', marginLeft: 8, textDecoration: 'underline'
+                                }}
+                            >Change</button>
+                        </div>
+                    ) : (
+                        <div style={{
+                            marginBottom: 16, padding: '14px 16px',
+                            background: 'rgba(239, 68, 68, 0.08)', borderRadius: 10,
+                            border: '1px solid rgba(239, 68, 68, 0.2)'
+                        }}>
+                            <p style={{ color: 'var(--red-400)', fontSize: 13, marginBottom: 6 }}>
+                                ⚠️ No payment details found
+                            </p>
+                            <Link to="/bank-details" style={{
+                                color: 'var(--cyan-400)', fontSize: 13, fontWeight: 600,
+                                textDecoration: 'underline'
+                            }}>
+                                Add Bank Account or UPI ID to enable withdrawal →
+                            </Link>
+                        </div>
+                    )}
+
+                    {/* Withdraw Input */}
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <input
+                            className="form-input"
+                            type="number"
+                            placeholder="Enter amount (min ₹100)"
+                            value={withdrawAmount}
+                            onChange={(e) => setWithdrawAmount(e.target.value)}
+                            style={{ flex: 1 }}
+                            id="home-withdraw-amount"
+                        />
+                        <button
+                            className="btn btn-success"
+                            onClick={handleWithdraw}
+                            disabled={withdrawLoading || !bankDetails || !(earnings?.canWithdraw)}
+                            style={{ whiteSpace: 'nowrap', padding: '10px 20px' }}
+                            id="home-withdraw-btn"
+                        >
+                            {withdrawLoading ? '⏳ Processing...' : '💸 Withdraw'}
+                        </button>
+                    </div>
+
+                    {!(earnings?.canWithdraw) && (
+                        <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 8 }}>
+                            Minimum balance of ₹100 required to withdraw
+                        </p>
+                    )}
+
+                    {/* Recent Withdrawal Status */}
+                    {recentWithdrawals.length > 0 && (
+                        <div style={{ marginTop: 16 }}>
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600 }}>
+                                Recent Withdrawals:
+                            </div>
+                            {recentWithdrawals.map((t) => (
+                                <div key={t._id} style={{
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    padding: '8px 12px', borderRadius: 8,
+                                    background: 'rgba(0,0,0,0.2)', marginBottom: 6,
+                                    border: '1px solid rgba(255,255,255,0.04)'
+                                }}>
+                                    <div>
+                                        <span style={{ fontSize: 13, fontWeight: 600 }}>₹{t.amount.toFixed(2)}</span>
+                                        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>
+                                            {new Date(t.createdAt).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <span style={{
+                                        fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+                                        padding: '2px 8px', borderRadius: 4,
+                                        color: t.status === 'approved' || t.status === 'completed' ? 'var(--green-400)' :
+                                            t.status === 'pending' ? 'var(--yellow-400)' : 'var(--red-400)',
+                                        background: t.status === 'approved' || t.status === 'completed' ? 'rgba(74,222,128,0.1)' :
+                                            t.status === 'pending' ? 'rgba(250,204,21,0.1)' : 'rgba(248,113,113,0.1)'
+                                    }}>
+                                        {t.status}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Referral Code Section */}
