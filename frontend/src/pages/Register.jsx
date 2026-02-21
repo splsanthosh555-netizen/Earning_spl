@@ -42,7 +42,8 @@ export default function Register() {
         try {
             await API.post('/auth/send-otp', {
                 target: form.email,
-                type: 'email'
+                type: 'email',
+                purpose: 'register'
             });
 
             setEmailOtpSent(true);

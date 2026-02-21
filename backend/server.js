@@ -9,8 +9,6 @@ const Counter = require('./models/Counter');
 const authRoutes = require('./routes/auth');
 const app = express();
 
-app.use('/api/auth', authRoutes);
-
 // Middleware
 app.use(cors({
     origin: [

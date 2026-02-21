@@ -231,9 +231,19 @@ router.post('/login', async (req, res) => {
 
         res.json({
             token,
-            userId: user.userId,
-            firstName: user.firstName,
-            lastName: user.lastName
+            user: {
+                userId: user.userId,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                phone: user.phone,
+                membership: user.membership,
+                membershipApproved: user.membershipApproved,
+                isAdmin: user.isAdmin,
+                walletBalance: user.walletBalance,
+                totalEarnings: user.totalEarnings,
+                isActive: user.isActive
+            }
         });
 
     } catch (error) {
