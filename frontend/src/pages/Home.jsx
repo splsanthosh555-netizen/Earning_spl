@@ -42,7 +42,8 @@ export default function Home() {
                 setBankDetails(bankRes.data);
             }
             // Show only last 3 withdrawal transactions
-            const withdrawals = (historyRes.data || []).filter(t => t.type === 'withdrawal').slice(0, 3);
+            const historyData = Array.isArray(historyRes.data) ? historyRes.data : [];
+            const withdrawals = historyData.filter(t => t.type === 'withdrawal').slice(0, 3);
             setRecentWithdrawals(withdrawals);
         } catch (err) { }
     };
@@ -84,7 +85,7 @@ export default function Home() {
     const openDirectLines = async () => {
         try {
             const res = await API.get('/referral/direct');
-            setDirectLines(res.data);
+            setDirectLines(Array.isArray(res.data) ? res.data : []);
             setShowDirect(true);
         } catch (err) { toast.error('Failed to load'); }
     };
@@ -92,7 +93,7 @@ export default function Home() {
     const openIndirectLines = async () => {
         try {
             const res = await API.get('/referral/indirect');
-            setIndirectLines(res.data);
+            setIndirectLines(Array.isArray(res.data) ? res.data : []);
             setShowIndirect(true);
         } catch (err) { toast.error('Failed to load'); }
     };
