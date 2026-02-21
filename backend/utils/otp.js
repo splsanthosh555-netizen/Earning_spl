@@ -23,12 +23,12 @@ const hashOTP = (otp) => {
 };
 
 // ==============================
-// SEND EMAIL (RESEND)
+// SEND EMAIL (RESEND - PRODUCTION)
 // ==============================
 const sendEmail = async (target, otp) => {
     try {
         const response = await resend.emails.send({
-            from: 'onboarding@resend.dev', // Safe testing sender
+            from: 'SPL Earnings <noreply@earningspl.com>',  // ✅ VERIFIED DOMAIN
             to: target,
             subject: 'SPL Earnings OTP Verification',
             html: `
@@ -72,7 +72,6 @@ const sendSMS = async (target, otp) => {
         );
 
         console.log("Fast2SMS Response:", response.data);
-
         return response.data.return === true;
 
     } catch (error) {
