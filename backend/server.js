@@ -6,6 +6,7 @@ const axios = require('axios'); // ✅ Added for IP check
 const connectDB = require('./config/db');
 const User = require('./models/User');
 const Counter = require('./models/Counter');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 
