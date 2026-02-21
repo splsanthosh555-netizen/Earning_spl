@@ -180,9 +180,14 @@ router.post('/register', async (req, res) => {
 // ======================================
 // LOGIN
 // ======================================
+// ======================================
+// LOGIN
+// ======================================
 router.post('/login', async (req, res) => {
     try {
         const { userId, password } = req.body;
+
+        console.log("LOGIN INPUT:", userId, password);
 
         if (!userId || !password) {
             return res.status(400).json({
@@ -191,6 +196,7 @@ router.post('/login', async (req, res) => {
         }
 
         const loginInput = String(userId).trim();
+
         let user;
 
         if (loginInput.includes('@')) {
@@ -200,24 +206,19 @@ router.post('/login', async (req, res) => {
         }
 
         if (!user) {
-            return res.status(401).json({
-                message: 'Invalid credentials'
-            });
+            console.log("❌ USER NOT FOUND");
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        // 🔥 Require verified email
-        if (!user.isEmailVerified) {
-            return res.status(403).json({
-                message: 'Please verify your email before login'
-            });
-        }
+        console.log("DB PASSWORD HASH:", user.password);
 
         const isMatch = await user.matchPassword(password);
 
+        console.log("PASSWORD MATCH RESULT:", isMatch);
+
         if (!isMatch) {
-            return res.status(401).json({
-                message: 'Invalid credentials'
-            });
+            console.log("❌ PASSWORD INCORRECT");
+            return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         const token = jwt.sign(
@@ -225,6 +226,8 @@ router.post('/login', async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
+
+        console.log("✅ LOGIN SUCCESS");
 
         res.json({
             token,
@@ -238,6 +241,3 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
-
-
-module.exports = router;
