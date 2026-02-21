@@ -9,5 +9,8 @@
         "dev:backend": "cd backend && node server.js",
         "dev:frontend": "cd frontend && npm run dev",
         "render-build": "cd backend && npm install && cd ../frontend && npm install && npm run build"
+    },
+    "dependencies": {
+        "bcryptjs": "^3.0.3"
     }
 }
