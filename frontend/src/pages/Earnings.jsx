@@ -40,7 +40,7 @@ export default function Earnings() {
     const fetchHistory = async () => {
         try {
             const res = await API.get('/earnings/history');
-            setTransactions(res.data);
+            setTransactions(Array.isArray(res.data) ? res.data : []);
         } catch (err) { }
     };
 

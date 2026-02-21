@@ -26,19 +26,23 @@ export default function AdminPanel() {
                 setDashData(res.data);
             } else if (currentTab === 'users') {
                 const res = await API.get('/admin/users');
-                setUsers(res.data);
+                setUsers(Array.isArray(res.data) ? res.data : []);
             } else if (currentTab === 'approvals') {
                 const res = await API.get('/admin/approvals');
-                setApprovals(res.data);
+                const data = res.data || {};
+                setApprovals({
+                    pendingMemberships: Array.isArray(data.pendingMemberships) ? data.pendingMemberships : [],
+                    pendingWithdrawals: Array.isArray(data.pendingWithdrawals) ? data.pendingWithdrawals : []
+                });
             } else if (currentTab === 'lines') {
                 const res = await API.get('/admin/lines');
-                setLines(res.data);
+                setLines(Array.isArray(res.data) ? res.data : []);
             } else if (currentTab === 'active') {
                 const res = await API.get('/admin/active-users');
-                setActiveUsers(res.data);
+                setActiveUsers(Array.isArray(res.data) ? res.data : []);
             } else if (currentTab === 'inactive') {
                 const res = await API.get('/admin/inactive-users');
-                setInactiveUsers(res.data);
+                setInactiveUsers(Array.isArray(res.data) ? res.data : []);
             }
         } catch (err) {
             const msg = err.response?.data?.message || 'Failed to load data';
