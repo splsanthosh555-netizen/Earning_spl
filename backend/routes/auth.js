@@ -22,7 +22,7 @@ router.post('/send-otp', async (req, res) => {
 
         const cleanEmail = target.trim().toLowerCase();
 
-        // Check if already registered
+        // Prevent duplicate during register
         if (purpose === 'register') {
             const existing = await User.findOne({ email: cleanEmail });
             if (existing) {
@@ -75,6 +75,12 @@ router.post('/verify-otp', async (req, res) => {
             });
         }
 
+        // 🔥 Mark email as verified in User model
+        await User.updateOne(
+            { email: cleanEmail },
+            { isEmailVerified: true }
+        );
+
         res.json({
             message: 'OTP verified successfully',
             verified: true
@@ -124,7 +130,7 @@ router.post('/register', async (req, res) => {
         const cleanEmail = email.trim().toLowerCase();
         const cleanPhone = phone.trim();
 
-        // Duplicate checks
+        // Duplicate check
         const existingEmail = await User.findOne({ email: cleanEmail });
         if (existingEmail) {
             return res.status(400).json({ message: 'Email already registered' });
@@ -135,7 +141,7 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'Phone already registered' });
         }
 
-        // ✅ CORRECT USER ID GENERATION
+        // Generate User ID
         const userId = await Counter.getNextUserId();
 
         const newUser = await User.create({
@@ -146,7 +152,8 @@ router.post('/register', async (req, res) => {
             phone: cleanPhone,
             password,
             gender,
-            referredBy: referralCode ? parseInt(referralCode) : null
+            referredBy: referralCode ? parseInt(referralCode) : null,
+            isEmailVerified: true // since OTP verified before register
         });
 
         const token = jwt.sign(
@@ -169,6 +176,7 @@ router.post('/register', async (req, res) => {
     }
 });
 
+
 // ======================================
 // LOGIN
 // ======================================
@@ -182,31 +190,31 @@ router.post('/login', async (req, res) => {
             });
         }
 
+        const loginInput = String(userId).trim();
         let user;
 
-        // Always convert to string first
-        const loginInput = String(userId).trim();
-
-        // Login by email
         if (loginInput.includes('@')) {
             user = await User.findOne({ email: loginInput.toLowerCase() });
-        }
-        // Login by userId number
-        else {
+        } else {
             user = await User.findOne({ userId: Number(loginInput) });
         }
 
         if (!user) {
-            console.log("❌ User not found");
             return res.status(401).json({
                 message: 'Invalid credentials'
+            });
+        }
+
+        // 🔥 Require verified email
+        if (!user.isEmailVerified) {
+            return res.status(403).json({
+                message: 'Please verify your email before login'
             });
         }
 
         const isMatch = await user.matchPassword(password);
 
         if (!isMatch) {
-            console.log("❌ Password incorrect");
             return res.status(401).json({
                 message: 'Invalid credentials'
             });
@@ -217,8 +225,6 @@ router.post('/login', async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
-
-        console.log("✅ Login successful");
 
         res.json({
             token,
@@ -232,3 +238,6 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
+
+
+module.exports = router;
