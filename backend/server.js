@@ -7,8 +7,9 @@ const connectDB = require('./config/db');
 const User = require('./models/User');
 const Counter = require('./models/Counter');
 const authRoutes = require('./routes/auth');
-
 const app = express();
+
+app.use('/api/auth', authRoutes);
 
 // Middleware
 app.use(cors({
@@ -29,7 +30,7 @@ app.use((req, res, next) => {
 });
 
 // API Routes
-app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth', authRoutes);
 app.use('/api/user', require('./routes/user'));
 app.use('/api/membership', require('./routes/membership'));
 app.use('/api/referral', require('./routes/referral'));
