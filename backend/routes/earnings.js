@@ -3,6 +3,7 @@ const User = require('../models/User');
 const BankDetails = require('../models/BankDetails');
 const Transaction = require('../models/Transaction');
 const { protect } = require('../middleware/auth');
+const { isCashfreeConfigured, createCashfreePayout } = require('../utils/cashfreePayout');
 
 const router = express.Router();
 
@@ -59,7 +60,44 @@ router.post('/withdraw', protect, async (req, res) => {
             return res.status(400).json({ message: 'Please update your Bank/UPI details first' });
         }
 
-        // Create pending withdrawal
+        // ========================================
+        // TRY AUTOMATIC PAYOUT via Cashfree
+        // ========================================
+        if (isCashfreeConfigured()) {
+            try {
+                // Send money instantly via Cashfree Payouts
+                const payout = await createCashfreePayout(user, bankDetails, amount);
+
+                // Create completed transaction
+                await Transaction.create({
+                    userId: user.userId,
+                    type: 'withdrawal',
+                    amount,
+                    description: `Withdrawal to ${bankDetails.upiId || bankDetails.accountNumber} (Auto: ${payout.id})`,
+                    status: 'completed'
+                });
+
+                // Debit wallet
+                if (user.walletBalance >= amount) {
+                    user.walletBalance -= amount;
+                    await user.save();
+                }
+
+                return res.json({
+                    message: `₹${amount} sent successfully to ${bankDetails.upiId || bankDetails.accountNumber}!`,
+                    payoutId: payout.id,
+                    mode: 'automatic'
+                });
+
+            } catch (payoutError) {
+                console.error('⚠️ Auto payout failed, falling back to manual:', payoutError.message);
+                // Fall through to manual payout below
+            }
+        }
+
+        // ========================================
+        // MANUAL PAYOUT (Admin Approval Required)
+        // ========================================
         await Transaction.create({
             userId: user.userId,
             type: 'withdrawal',
@@ -74,7 +112,10 @@ router.post('/withdraw', protect, async (req, res) => {
             await user.save();
         }
 
-        res.json({ message: 'Withdrawal request submitted. Waiting for admin approval.' });
+        res.json({
+            message: 'Withdrawal request submitted. Admin will process your payment shortly.',
+            mode: 'manual'
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
