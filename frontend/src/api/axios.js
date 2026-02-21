@@ -3,7 +3,8 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const API = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'https://earning-spl.onrender.com/api',
+    baseURL: '/api',
+    timeout: 60000
 });
 
 // Add auth token to every request
