@@ -8,16 +8,15 @@ const counterSchema = new mongoose.Schema(
         },
         seq: {
             type: Number,
-            default: 0
+            default: 1135840 // starting base (you can change this)
         }
     },
-    {
-        versionKey: false
-    }
+    { versionKey: false }
 );
 
-// Static method to generate next userId
+// Custom Smart UserID Generator
 counterSchema.statics.getNextUserId = async function () {
+
     const counter = await this.findByIdAndUpdate(
         'userId',
         { $inc: { seq: 1 } },
@@ -28,7 +27,21 @@ counterSchema.statics.getNextUserId = async function () {
         }
     );
 
-    return counter.seq;
+    let nextId = counter.seq;
+
+    // 🔥 If exceeds 10 digits → adjust last 3 digits logic
+    if (nextId.toString().length > 10) {
+
+        const firstPart = nextId.toString().slice(0, 7); // keep first 7 digits
+        const lastThree = 501; // reset pattern
+
+        nextId = parseInt(firstPart + lastThree);
+
+        counter.seq = nextId;
+        await counter.save();
+    }
+
+    return nextId;
 };
 
 module.exports = mongoose.model('Counter', counterSchema);
