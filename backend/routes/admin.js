@@ -160,22 +160,20 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 return res.status(400).json({ message: 'User or Bank Details missing' });
             }
 
-            // Check if RazorpayX is configured
-            const isRazorpayConfigured = process.env.RAZORPAYX_KEY_ID &&
-                process.env.RAZORPAYX_KEY_ID !== 'rzp_test_placeholder' &&
-                !process.env.RAZORPAYX_KEY_ID.includes('placeholder');
+            // Check if Cashfree is configured
+            const { isCashfreeConfigured, createCashfreePayout } = require('../utils/cashfreePayout');
 
             let payoutId = 'MANUAL';
 
-            if (isRazorpayConfigured) {
+            if (isCashfreeConfigured()) {
                 try {
-                    const { createPayout } = require('../utils/payouts');
-                    const payout = await createPayout(user, bankDetails, transaction.amount);
+                    const payout = await createCashfreePayout(user, bankDetails, transaction.amount);
                     payoutId = payout.id;
                     transaction.description += ` (Auto Payout: ${payoutId})`;
                 } catch (payoutError) {
+                    console.error('Auto Payout Error:', payoutError);
                     return res.status(500).json({
-                        message: 'Automated payout failed. Please transfer manually or check Razorpay setup.',
+                        message: 'Automated payout failed. Please transfer manually or check Cashfree setup.',
                         error: payoutError.message
                     });
                 }
@@ -183,7 +181,7 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 transaction.description += ' (Manual Payout Verified)';
             }
 
-            transaction.status = 'approved';
+            transaction.status = isCashfreeConfigured() ? 'completed' : 'approved';
             await transaction.save();
 
             // Log the action for strict auditing

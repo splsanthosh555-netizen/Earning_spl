@@ -12,16 +12,22 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const token = localStorage.getItem('spl_token');
         const savedUser = localStorage.getItem('spl_user');
+
         if (token && savedUser) {
-            setUser(JSON.parse(savedUser));
-            // Refresh user data
-            API.get('/user/profile').then(res => {
-                const userData = res.data;
-                setUser(userData);
-                localStorage.setItem('spl_user', JSON.stringify(userData));
-            }).catch(() => {
+            try {
+                setUser(JSON.parse(savedUser));
+                // Refresh user data
+                API.get('/user/profile').then(res => {
+                    const userData = res.data;
+                    setUser(userData);
+                    localStorage.setItem('spl_user', JSON.stringify(userData));
+                }).catch(() => {
+                    logout();
+                });
+            } catch (err) {
+                console.error("Auth init error:", err);
                 logout();
-            });
+            }
         }
         setLoading(false);
     }, []);

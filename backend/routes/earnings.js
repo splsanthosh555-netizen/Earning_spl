@@ -60,44 +60,7 @@ router.post('/withdraw', protect, async (req, res) => {
             return res.status(400).json({ message: 'Please update your Bank/UPI details first' });
         }
 
-        // ========================================
-        // TRY AUTOMATIC PAYOUT via Cashfree
-        // ========================================
-        if (isCashfreeConfigured()) {
-            try {
-                // Send money instantly via Cashfree Payouts
-                const payout = await createCashfreePayout(user, bankDetails, amount);
-
-                // Create completed transaction
-                await Transaction.create({
-                    userId: user.userId,
-                    type: 'withdrawal',
-                    amount,
-                    description: `Withdrawal to ${bankDetails.upiId || bankDetails.accountNumber} (Auto: ${payout.id})`,
-                    status: 'completed'
-                });
-
-                // Debit wallet
-                if (user.walletBalance >= amount) {
-                    user.walletBalance -= amount;
-                    await user.save();
-                }
-
-                return res.json({
-                    message: `₹${amount} sent successfully to ${bankDetails.upiId || bankDetails.accountNumber}!`,
-                    payoutId: payout.id,
-                    mode: 'automatic'
-                });
-
-            } catch (payoutError) {
-                console.error('⚠️ Auto payout failed, falling back to manual:', payoutError.message);
-                // Fall through to manual payout below
-            }
-        }
-
-        // ========================================
-        // MANUAL PAYOUT (Admin Approval Required)
-        // ========================================
+        // Create pending withdrawal request (Admin Approval Required)
         await Transaction.create({
             userId: user.userId,
             type: 'withdrawal',
@@ -106,14 +69,14 @@ router.post('/withdraw', protect, async (req, res) => {
             status: 'pending'
         });
 
-        // Hold the amount (only if balance is sufficient)
+        // Hold the amount
         if (user.walletBalance >= amount) {
             user.walletBalance -= amount;
             await user.save();
         }
 
         res.json({
-            message: 'Withdrawal request submitted. Admin will process your payment shortly.',
+            message: 'Withdrawal request submitted. Waiting for admin approval.',
             mode: 'manual'
         });
     } catch (error) {
