@@ -244,17 +244,29 @@ export default function Home() {
                             background: 'rgba(34, 211, 238, 0.08)', padding: '12px 16px',
                             borderRadius: 10, border: '1px solid rgba(34, 211, 238, 0.15)'
                         }}>
-                            <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: 11, marginBottom: 4 }}>
-                                💳 Withdrawal Destination:
-                            </span>
-                            <strong>{bankDetails.upiId ? `UPI: ${bankDetails.upiId}` : `${bankDetails.bankName} - A/C: ${bankDetails.accountNumber}`}</strong>
-                            <button
-                                onClick={() => navigate('/bank-details')}
-                                style={{
-                                    background: 'none', border: 'none', color: 'var(--purple-400)',
-                                    fontSize: 11, cursor: 'pointer', marginLeft: 8, textDecoration: 'underline'
-                                }}
-                            >Change</button>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>💳 Withdrawal Destination:</span>
+                                <button
+                                    onClick={() => navigate('/bank-details')}
+                                    style={{
+                                        background: 'none', border: 'none', color: 'var(--purple-400)',
+                                        fontSize: 11, cursor: 'pointer', textDecoration: 'underline'
+                                    }}
+                                >Edit Details</button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <div style={{ fontWeight: 600 }}>Bank: {bankDetails.bankName}</div>
+                                <div style={{ fontSize: 12, opacity: 0.8 }}>A/C: {bankDetails.accountNumber}</div>
+                                {bankDetails.upiId && (
+                                    <div style={{
+                                        marginTop: 4, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.1)',
+                                        color: 'var(--purple-400)', fontWeight: 600
+                                    }}>
+                                        UPI ID: {bankDetails.upiId}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div style={{

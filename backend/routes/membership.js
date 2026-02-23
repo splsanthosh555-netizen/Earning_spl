@@ -2,6 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const { protect } = require('../middleware/auth');
+const { isCashfreeConfigured, createPaymentSession, verifyPayment } = require('../utils/cashfreePG');
 
 const router = express.Router();
 
@@ -50,15 +51,37 @@ router.post('/buy', protect, async (req, res) => {
         }
 
         const cost = MEMBERSHIP_COSTS[membershipType];
+        const orderId = `MEM_${user.userId}_${Date.now()}`;
 
-        // For upgrade, amount goes directly to admin
-        const isUpgrade = user.membership !== 'none';
+        // Try Cashfree Automated Flow
+        if (isCashfreeConfigured()) {
+            try {
+                const session = await createPaymentSession(orderId, cost, user);
 
+                // Update user with pending info
+                user.pendingMembership = membershipType;
+                user.pendingTransactionId = orderId;
+                await user.save();
+
+                return res.json({
+                    mode: 'automatic',
+                    paymentSessionId: session.payment_session_id,
+                    orderId: orderId,
+                    membershipType
+                });
+            } catch (pgError) {
+                console.error('❌ PG Session Error:', pgError.message);
+                // Fallback to manual if PG fails
+            }
+        }
+
+        // Manual Fallback
         res.json({
-            message: 'Proceed to payment',
+            mode: 'manual',
+            message: 'Proceed to manual payment',
             membershipType,
             cost,
-            isUpgrade,
+            orderId,
             paymentInfo: {
                 upiId: '9502643906-2@axl',
                 amount: cost,
@@ -96,6 +119,30 @@ router.post('/submit-transaction', protect, async (req, res) => {
         res.json({ message: 'Transaction submitted. Waiting for admin approval.' });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+});
+
+// POST /api/membership/verify-order
+router.post('/verify-order', protect, async (req, res) => {
+    try {
+        const { orderId, membershipType } = req.body;
+        const user = await User.findOne({ userId: req.user.userId });
+
+        if (!user || user.pendingTransactionId !== orderId) {
+            return res.status(400).json({ success: false, message: 'Invalid order or request mismatch.' });
+        }
+
+        const status = await verifyPayment(orderId);
+
+        if (status === 'PAID') {
+            await processMembershipApproval(user.userId);
+            return res.json({ success: true, message: 'Payment verified! Membership activated.' });
+        } else {
+            return res.status(400).json({ success: false, message: `Payment status: ${status}. Please try again if paid.` });
+        }
+    } catch (error) {
+        console.error('❌ Verify Order Error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 

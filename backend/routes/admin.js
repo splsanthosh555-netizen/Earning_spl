@@ -160,21 +160,24 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 return res.status(400).json({ message: 'User or Bank Details missing' });
             }
 
-            // Check if Cashfree is configured
+            // Handle Manual or Automatic Payout
             const { isCashfreeConfigured, createCashfreePayout } = require('../utils/cashfreePayout');
+            const { mode } = req.body; // 'auto' or 'manual'
 
             let payoutId = 'MANUAL';
 
-            if (isCashfreeConfigured()) {
+            if (mode === 'auto' && isCashfreeConfigured()) {
                 try {
                     const payout = await createCashfreePayout(user, bankDetails, transaction.amount);
                     payoutId = payout.id;
                     transaction.description += ` (Auto Payout: ${payoutId})`;
                 } catch (payoutError) {
-                    console.error('Auto Payout Error:', payoutError);
+                    const errorMsg = payoutError.response?.data?.message || payoutError.message;
+                    console.error('❌ Payout Processing Error:', errorMsg);
                     return res.status(500).json({
-                        message: 'Automated payout failed. Please transfer manually or check Cashfree setup.',
-                        error: payoutError.message
+                        message: `Automated payout failed: ${errorMsg}`,
+                        error: errorMsg,
+                        canManual: true
                     });
                 }
             } else {

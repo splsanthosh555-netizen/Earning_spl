@@ -61,21 +61,42 @@ export default function AdminPanel() {
         setLoading(false);
     };
 
-    const approveWithdrawal = async (transactionId, action) => {
+    const approveWithdrawal = async (transactionId, action, forcedMode = null) => {
+        let mode = forcedMode;
+
+        if (action === 'approve' && !mode) {
+            const choice = window.confirm(
+                "How would you like to approve this withdrawal?\n\n" +
+                "Click OK for AUTOMATED BANK TRANSFER (via Cashfree)\n" +
+                "Click CANCEL for MANUAL TRANSFER (already sent via PhonePe/GPay)"
+            );
+            mode = choice ? 'auto' : 'manual';
+        }
+
         const note = window.prompt(`Enter a note for this ${action}:`) || '';
         if (action === 'reject' && !note) {
             return toast.error('Please provide a reason for rejection.');
         }
 
-        if (!window.confirm(`Are you sure you want to ${action} this ₹ withdrawal?`)) return;
-
         setLoading(true);
         try {
-            await API.post('/admin/approve-withdrawal', { transactionId, action, adminNote: note });
+            await API.post('/admin/approve-withdrawal', {
+                transactionId,
+                action,
+                adminNote: note,
+                mode: mode
+            });
             toast.success(`Withdrawal ${action === 'approve' ? 'approved' : 'rejected'}`);
             loadTabData('approvals');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Action failed');
+            const data = err.response?.data;
+            if (data?.canManual) {
+                if (window.confirm(`${data.message}\n\nWould you like to approve MANUALLY instead? (Choose this ONLY if you have already sent the money via UPI manually)`)) {
+                    approveWithdrawal(transactionId, 'approve', 'manual');
+                }
+            } else {
+                toast.error(data?.message || 'Action failed');
+            }
         }
         setLoading(false);
     };
@@ -244,43 +265,44 @@ export default function AdminPanel() {
                                     {t.bankDetails && (
                                         <div style={{
                                             fontSize: 12, background: 'rgba(255,255,255,0.05)',
-                                            padding: '6px 10px', borderRadius: 6, margin: '8px 0',
+                                            padding: '10px 12px', borderRadius: 8, margin: '10px 0',
                                             border: '1px solid var(--border-glass)'
                                         }}>
-                                            {t.bankDetails.upiId ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                    <div style={{ color: 'var(--cyan-400)', fontWeight: 600 }}>
-                                                        UPI ID: {t.bankDetails.upiId}
-                                                    </div>
-                                                    <button
-                                                        className="btn-icon"
-                                                        onClick={() => {
-                                                            navigator.clipboard.writeText(t.bankDetails.upiId);
-                                                            toast.success('UPI ID copied!');
-                                                        }}
-                                                        title="Copy UPI ID"
-                                                    >
-                                                        <FiCopy size={14} />
+                                            {/* Bank Section */}
+                                            <div style={{ marginBottom: t.bankDetails.upiId ? 12 : 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                    <span style={{ color: 'var(--text-main)', fontWeight: 700, fontSize: 13 }}>🏦 Bank Account</span>
+                                                    <button className="btn-icon" onClick={() => {
+                                                        const text = `Bank: ${t.bankDetails.bankName}, A/C: ${t.bankDetails.accountNumber}, IFSC: ${t.bankDetails.ifscCode}`;
+                                                        navigator.clipboard.writeText(text);
+                                                        toast.success('Bank details copied!');
+                                                    }} title="Copy Bank Details">
+                                                        <FiCopy size={13} />
                                                     </button>
                                                 </div>
-                                            ) : (
-                                                <div style={{ position: 'relative' }}>
-                                                    <div style={{ color: 'var(--text-muted)' }}>
-                                                        <span style={{ color: 'var(--text-main)' }}>Bank: {t.bankDetails.bankName}</span><br />
-                                                        A/C: {t.bankDetails.accountNumber} | IFSC: {t.bankDetails.ifscCode}
+                                                <div style={{ color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                                                    {t.bankDetails.accountHolderName}<br />
+                                                    {t.bankDetails.bankName}<br />
+                                                    <span style={{ color: 'var(--cyan-400)', fontFamily: 'monospace' }}>A/C: {t.bankDetails.accountNumber}</span><br />
+                                                    <span style={{ color: 'var(--cyan-400)', fontFamily: 'monospace' }}>IFSC: {t.bankDetails.ifscCode}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* UPI Section */}
+                                            {t.bankDetails.upiId && (
+                                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10, marginTop: 10 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                        <span style={{ color: 'var(--purple-400)', fontWeight: 700, fontSize: 13 }}>📱 UPI ID</span>
+                                                        <button className="btn-icon" onClick={() => {
+                                                            navigator.clipboard.writeText(t.bankDetails.upiId);
+                                                            toast.success('UPI ID copied!');
+                                                        }} title="Copy UPI ID">
+                                                            <FiCopy size={13} />
+                                                        </button>
                                                     </div>
-                                                    <button
-                                                        className="btn-icon"
-                                                        style={{ position: 'absolute', top: 0, right: 0 }}
-                                                        onClick={() => {
-                                                            const text = `A/C: ${t.bankDetails.accountNumber}, IFSC: ${t.bankDetails.ifscCode}`;
-                                                            navigator.clipboard.writeText(text);
-                                                            toast.success('Account details copied!');
-                                                        }}
-                                                        title="Copy Bank Details"
-                                                    >
-                                                        <FiCopy size={14} />
-                                                    </button>
+                                                    <div style={{ color: 'var(--cyan-400)', fontWeight: 600, fontFamily: 'monospace' }}>
+                                                        {t.bankDetails.upiId}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

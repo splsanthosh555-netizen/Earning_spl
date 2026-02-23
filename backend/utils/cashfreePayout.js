@@ -7,8 +7,8 @@ const BASE_URL = CASHFREE_ENV === 'PRODUCTION'
     ? 'https://payout-api.cashfree.com'
     : 'https://payout-gamma.cashfree.com';
 
-const CLIENT_ID = process.env.CASHFREE_CLIENT_ID;
-const CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET;
+const CLIENT_ID = process.env.CASHFREE_CLIENT_ID?.replace(/[\n\r\s]/g, '');
+const CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET?.replace(/[\n\r\s]/g, '');
 
 let authToken = null;
 let tokenExpiry = 0;
@@ -46,11 +46,14 @@ const authenticate = async () => {
             console.log('✅ Cashfree Payouts authenticated');
             return authToken;
         } else {
-            throw new Error(response.data.message || 'Authentication failed');
+            const msg = response.data.message || 'Authentication failed';
+            console.error('❌ Cashfree Auth Status Failed:', msg);
+            throw new Error(msg);
         }
     } catch (error) {
-        console.error('❌ Cashfree Auth Error:', error.response?.data || error.message);
-        throw new Error('Cashfree authentication failed');
+        const errorDetail = error.response?.data?.message || error.message;
+        console.error('❌ Cashfree Auth Error:', errorDetail);
+        throw new Error(`Auth Failed: ${errorDetail}`);
     }
 };
 
@@ -143,7 +146,8 @@ const createCashfreePayout = async (user, bankDetails, amount) => {
             throw new Error(response.data.message || 'Payout failed');
         }
     } catch (error) {
-        console.error('❌ Cashfree Payout Error:', error.response?.data || error.message);
+        const rawError = error.response?.data;
+        console.error('❌ RAW Cashfree Payout Error:', JSON.stringify(rawError, null, 2) || error.message);
         throw error;
     }
 };
