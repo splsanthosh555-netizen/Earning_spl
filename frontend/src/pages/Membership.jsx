@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiAward, FiCheck, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
@@ -43,18 +43,63 @@ export default function Membership() {
     const [transactionId, setTransactionId] = useState('');
     const [paymentInfo, setPaymentInfo] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [cashfree, setCashfree] = useState(null);
+
+    useEffect(() => {
+        // Initialize Cashfree
+        if (window.Cashfree) {
+            setCashfree(window.Cashfree({
+                mode: "sandbox" // Change to "production" when live
+            }));
+        }
+    }, []);
 
     const handleBuy = async (type) => {
         setLoading(true);
         try {
             const res = await API.post('/membership/buy', { membershipType: type });
-            setSelectedType(type);
-            setPaymentInfo(res.data.paymentInfo);
-            setShowPayment(true);
+
+            if (res.data.mode === 'automatic' && cashfree) {
+                // AUTOMATIC CHECKOUT
+                let checkoutOptions = {
+                    paymentSessionId: res.data.paymentSessionId,
+                    redirectTarget: "_modal", // Opens in a modal
+                };
+
+                cashfree.checkout(checkoutOptions).then((result) => {
+                    if (result.error) {
+                        toast.error(result.error.message);
+                    }
+                    if (result.redirect) {
+                        console.log("Payment redirected");
+                    }
+                    if (result.paymentDetails) {
+                        // Check status
+                        verifyAutomatedPayment(res.data.orderId, type);
+                    }
+                });
+            } else {
+                // MANUAL FALLBACK
+                setSelectedType(type);
+                setPaymentInfo(res.data.paymentInfo);
+                setShowPayment(true);
+            }
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed');
+            toast.error(err.response?.data?.message || 'Failed to initiate purchase');
         }
         setLoading(false);
+    };
+
+    const verifyAutomatedPayment = async (orderId, type) => {
+        try {
+            const res = await API.post('/membership/verify-order', { orderId, membershipType: type });
+            if (res.data.success) {
+                toast.success('Membership Activated!');
+                refreshUser();
+            }
+        } catch (err) {
+            toast.error('Payment verification failed. Please contact support.');
+        }
     };
 
     const copyUpiId = () => {
@@ -124,7 +169,7 @@ export default function Membership() {
                             ) : canBuy ? (
                                 <button className="btn btn-primary btn-full" onClick={() => handleBuy(m.type)}
                                     disabled={loading || !!user?.pendingMembership}>
-                                    {user?.pendingMembership ? 'Pending Approval' : (currentRank > 0 ? 'Upgrade' : 'Buy Now')}
+                                    {loading ? 'Processing...' : (user?.pendingMembership ? 'Pending Approval' : (currentRank > 0 ? 'Upgrade' : 'Buy Now'))}
                                 </button>
                             ) : (
                                 <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>✓ Included</div>
@@ -134,7 +179,7 @@ export default function Membership() {
                 })}
             </div>
 
-            {/* Payment Modal */}
+            {/* Payment Modal (Manual Fallback Only) */}
             {showPayment && (
                 <div className="modal-overlay" onClick={() => setShowPayment(false)}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
