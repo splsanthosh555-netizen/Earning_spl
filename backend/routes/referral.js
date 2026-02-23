@@ -7,7 +7,7 @@ const router = express.Router();
 // GET /api/referral/link
 router.get('/link', protect, async (req, res) => {
     try {
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const frontendUrl = process.env.FRONTEND_URL || 'https://earningspl.com';
         const referralLink = `${frontendUrl}/register?ref=${req.user.userId}`;
         res.json({
             userId: req.user.userId,
