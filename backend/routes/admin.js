@@ -166,11 +166,21 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
 
             let payoutId = 'MANUAL';
 
-            if (mode === 'auto' && isCashfreeConfigured()) {
+            console.log(`[WITHDRAWAL] Processing. Mode: ${mode}, Configured: ${isCashfreeConfigured()}`);
+
+            if (mode === 'auto') {
+                if (!isCashfreeConfigured()) {
+                    return res.status(400).json({
+                        message: 'Cashfree is not configured on the server. Please check environment variables in Render.',
+                        canManual: true
+                    });
+                }
+
                 try {
                     const payout = await createCashfreePayout(user, bankDetails, transaction.amount);
                     payoutId = payout.id;
                     transaction.description += ` (Auto Payout: ${payoutId})`;
+                    transaction.status = 'completed';
                 } catch (payoutError) {
                     const errorMsg = payoutError.response?.data?.message || payoutError.message;
                     console.error('❌ Payout Processing Error:', errorMsg);
@@ -182,9 +192,9 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 }
             } else {
                 transaction.description += ' (Manual Payout Verified)';
+                transaction.status = 'approved';
             }
 
-            transaction.status = isCashfreeConfigured() ? 'completed' : 'approved';
             await transaction.save();
 
             // Log the action for strict auditing
