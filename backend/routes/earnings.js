@@ -60,6 +60,22 @@ router.post('/withdraw', protect, async (req, res) => {
             return res.status(400).json({ message: 'Please update your Bank/UPI details first' });
         }
 
+        // Limit: 3 withdrawals per day
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        const withdrawalCountToday = await Transaction.countDocuments({
+            userId: user.userId,
+            type: 'withdrawal',
+            createdAt: { $gte: today, $lt: tomorrow }
+        });
+
+        if (withdrawalCountToday >= 3) {
+            return res.status(400).json({ message: 'Daily limit reached. You can only request withdrawal 3 times per day.' });
+        }
+
         // Create pending withdrawal request (Admin Approval Required)
         await Transaction.create({
             userId: user.userId,
