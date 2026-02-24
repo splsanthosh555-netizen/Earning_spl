@@ -138,10 +138,10 @@ router.post('/approve-membership', protect, adminOnly, async (req, res) => {
     }
 });
 
-// POST /api/admin/approve-withdrawal (Manual Version)
+// POST /api/admin/approve-withdrawal (Automated-First Version)
 router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
     try {
-        const { transactionId, action, adminNote } = req.body;
+        const { transactionId, action, adminNote, mode = 'auto' } = req.body;
         const AuditLog = require('../models/AuditLog');
 
         const transaction = await Transaction.findById(transactionId);
@@ -155,6 +155,9 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         if (action === 'approve') {
+            const bankDetails = await BankDetails.findOne({ userId: transaction.userId });
+            if (!bankDetails) return res.status(400).json({ message: 'User bank details not found.' });
+
             // Check if user still has enough balance
             if (user.walletBalance < transaction.amount) {
                 transaction.status = 'failed';
@@ -163,12 +166,32 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 return res.status(400).json({ message: 'User no longer has enough balance.' });
             }
 
-            // Deduct balance now (since it wasn't held during request)
+            const { isCashfreeConfigured, createCashfreePayout } = require('../utils/cashfreePayout');
+            let payoutId = 'MANUAL';
+
+            // Try Automatic Payout
+            if (mode === 'auto' && isCashfreeConfigured()) {
+                try {
+                    const payout = await createCashfreePayout(user, bankDetails, transaction.amount);
+                    payoutId = payout.id;
+                    transaction.description += ` (Auto Payout: ${payoutId})`;
+                } catch (payoutError) {
+                    const errorMsg = payoutError.response?.data?.message || payoutError.message;
+                    console.error('❌ Automated Payout Failed:', errorMsg);
+                    return res.status(500).json({
+                        message: `Automated Payout Failed: ${errorMsg}. You can try Manual Approval instead.`,
+                        canManual: true
+                    });
+                }
+            } else {
+                transaction.description += ' (Manual Payout Approved by Admin)';
+            }
+
+            // DEDUCT BALANCE ONLY AFTER SUCCESSFUL PAYOUT OR MANUAL CONFIRMATION
             user.walletBalance -= transaction.amount;
             await user.save();
 
             transaction.status = 'completed';
-            transaction.description += ' (Manual Payout Approved)';
             await transaction.save();
 
             // Log approval
@@ -177,13 +200,13 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 adminEmail: req.user.email,
                 action: 'approve_withdrawal',
                 targetId: transactionId,
-                details: `Approved ₹${transaction.amount} for user ${transaction.userId}. Note: ${adminNote || 'Manual'}`,
+                details: `Approved ₹${transaction.amount} for user ${transaction.userId}. PayoutID: ${payoutId}. Mode: ${mode}`,
                 ipAddress: req.ip
             });
 
-            return res.json({ message: 'Withdrawal approved and balance deducted.' });
+            return res.json({ message: 'Withdrawal processed and balance deducted.', payoutId });
         } else {
-            // Reject - No refund needed because balance wasn't deducted at request
+            // Reject
             transaction.status = 'rejected';
             transaction.description += ` (Rejected: ${adminNote || 'No reason'})`;
             await transaction.save();
