@@ -61,17 +61,12 @@ export default function AdminPanel() {
         setLoading(false);
     };
 
-    const approveWithdrawal = async (transactionId, action, forcedMode = null) => {
-        let mode = forcedMode;
+    const approveWithdrawal = async (transactionId, action) => {
+        const confirmMsg = action === 'approve'
+            ? "Are you sure you want to APPROVE this withdrawal? Choose OK only if you have already sent the money manually to the user's bank/UPI."
+            : "Are you sure you want to REJECT this withdrawal?";
 
-        if (action === 'approve' && !mode) {
-            const choice = window.confirm(
-                "How would you like to approve this withdrawal?\n\n" +
-                "Click OK for AUTOMATED BANK TRANSFER (via Cashfree)\n" +
-                "Click CANCEL for MANUAL TRANSFER (already sent via PhonePe/GPay)"
-            );
-            mode = choice ? 'auto' : 'manual';
-        }
+        if (!window.confirm(confirmMsg)) return;
 
         const note = window.prompt(`Enter a note for this ${action}:`) || '';
         if (action === 'reject' && !note) {
@@ -83,20 +78,12 @@ export default function AdminPanel() {
             await API.post('/admin/approve-withdrawal', {
                 transactionId,
                 action,
-                adminNote: note,
-                mode: mode
+                adminNote: note
             });
             toast.success(`Withdrawal ${action === 'approve' ? 'approved' : 'rejected'}`);
             loadTabData('approvals');
         } catch (err) {
-            const data = err.response?.data;
-            if (data?.canManual) {
-                if (window.confirm(`${data.message}\n\nWould you like to approve MANUALLY instead? (Choose this ONLY if you have already sent the money via UPI manually)`)) {
-                    approveWithdrawal(transactionId, 'approve', 'manual');
-                }
-            } else {
-                toast.error(data?.message || 'Action failed');
-            }
+            toast.error(err.response?.data?.message || 'Action failed');
         }
         setLoading(false);
     };

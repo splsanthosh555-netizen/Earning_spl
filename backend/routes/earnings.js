@@ -40,24 +40,34 @@ router.post('/withdraw', protect, async (req, res) => {
         const { amount } = req.body;
         const user = await User.findOne({ userId: req.user.userId });
 
+        // REQUIREMENT: Membership active (not 'none')
+        if (user.membership === 'none') {
+            return res.status(400).json({ message: 'You must have an active membership to withdraw earnings.' });
+        }
+
         if (!amount || amount < 100) {
             return res.status(400).json({ message: 'Minimum withdrawal amount is ₹100' });
         }
 
-        // Only enforce balance check if NOT an admin (to allow testing)
-        if (!user.isAdmin && user.walletBalance < amount) {
+        if (user.walletBalance < amount) {
             return res.status(400).json({ message: 'Insufficient wallet balance' });
-        }
-
-        // Only enforce minimum balance if NOT an admin
-        if (!user.isAdmin && user.walletBalance < 100) {
-            return res.status(400).json({ message: 'Wallet balance must be at least ₹100 to withdraw' });
         }
 
         // Check if user has bank details
         const bankDetails = await BankDetails.findOne({ userId: req.user.userId });
         if (!bankDetails || (!bankDetails.accountNumber && !bankDetails.upiId)) {
             return res.status(400).json({ message: 'Please update your Bank/UPI details first' });
+        }
+
+        // Check if there is already a pending withdrawal
+        const pendingWithdrawal = await Transaction.findOne({
+            userId: user.userId,
+            type: 'withdrawal',
+            status: 'pending'
+        });
+
+        if (pendingWithdrawal) {
+            return res.status(400).json({ message: 'You already have a pending withdrawal request. Please wait for admin approval.' });
         }
 
         // Limit: 3 withdrawals per day
@@ -76,7 +86,7 @@ router.post('/withdraw', protect, async (req, res) => {
             return res.status(400).json({ message: 'Daily limit reached. You can only request withdrawal 3 times per day.' });
         }
 
-        // Create pending withdrawal request (Admin Approval Required)
+        // 1. Create pending withdrawal request
         await Transaction.create({
             userId: user.userId,
             type: 'withdrawal',
@@ -85,14 +95,10 @@ router.post('/withdraw', protect, async (req, res) => {
             status: 'pending'
         });
 
-        // Hold the amount
-        if (user.walletBalance >= amount) {
-            user.walletBalance -= amount;
-            await user.save();
-        }
+        // NOTE: In this flow, balance is deducted on ADMIN APPROVAL.
 
         res.json({
-            message: 'Withdrawal request submitted. Waiting for admin approval.',
+            message: 'Withdrawal request submitted. Waiting for admin manual approval.',
             mode: 'manual'
         });
     } catch (error) {

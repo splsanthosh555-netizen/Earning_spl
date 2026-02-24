@@ -138,7 +138,7 @@ router.post('/approve-membership', protect, adminOnly, async (req, res) => {
     }
 });
 
-// POST /api/admin/approve-withdrawal
+// POST /api/admin/approve-withdrawal (Manual Version)
 router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
     try {
         const { transactionId, action, adminNote } = req.body;
@@ -147,80 +147,48 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
         const transaction = await Transaction.findById(transactionId);
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
-        // STRICT CHECK: Prevent double processing
         if (transaction.status !== 'pending') {
-            return res.status(400).json({ message: `Transaction already processed (Current Status: ${transaction.status})` });
+            return res.status(400).json({ message: `Transaction already processed (Status: ${transaction.status})` });
         }
 
+        const user = await User.findOne({ userId: transaction.userId });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
         if (action === 'approve') {
-            const user = await User.findOne({ userId: transaction.userId });
-            const bankDetails = await BankDetails.findOne({ userId: transaction.userId });
-
-            if (!user || !bankDetails) {
-                return res.status(400).json({ message: 'User or Bank Details missing' });
+            // Check if user still has enough balance
+            if (user.walletBalance < transaction.amount) {
+                transaction.status = 'failed';
+                transaction.description += ' (Insufficient balance at approval)';
+                await transaction.save();
+                return res.status(400).json({ message: 'User no longer has enough balance.' });
             }
 
-            // Handle Manual or Automatic Payout
-            const { isCashfreeConfigured, createCashfreePayout } = require('../utils/cashfreePayout');
-            const { mode } = req.body; // 'auto' or 'manual'
+            // Deduct balance now (since it wasn't held during request)
+            user.walletBalance -= transaction.amount;
+            await user.save();
 
-            let payoutId = 'MANUAL';
-
-            console.log(`[WITHDRAWAL] Processing. Mode: ${mode}, Configured: ${isCashfreeConfigured()}`);
-
-            if (mode === 'auto') {
-                if (!isCashfreeConfigured()) {
-                    return res.status(400).json({
-                        message: 'Cashfree is not configured on the server. Please check environment variables in Render.',
-                        canManual: true
-                    });
-                }
-
-                try {
-                    const payout = await createCashfreePayout(user, bankDetails, transaction.amount);
-                    payoutId = payout.id;
-                    transaction.description += ` (Auto Payout: ${payoutId})`;
-                    transaction.status = 'completed';
-                } catch (payoutError) {
-                    const errorMsg = payoutError.response?.data?.message || payoutError.message;
-                    console.error('❌ Payout Processing Error:', errorMsg);
-                    return res.status(500).json({
-                        message: `Automated payout failed: ${errorMsg}`,
-                        error: errorMsg,
-                        canManual: true
-                    });
-                }
-            } else {
-                transaction.description += ' (Manual Payout Verified)';
-                transaction.status = 'approved';
-            }
-
+            transaction.status = 'completed';
+            transaction.description += ' (Manual Payout Approved)';
             await transaction.save();
 
-            // Log the action for strict auditing
+            // Log approval
             await AuditLog.create({
                 adminId: req.user.userId,
                 adminEmail: req.user.email,
                 action: 'approve_withdrawal',
                 targetId: transactionId,
-                details: `Approved ₹${transaction.amount} for user ${transaction.userId}. PayoutID: ${payoutId}. Note: ${adminNote || 'None'}`,
+                details: `Approved ₹${transaction.amount} for user ${transaction.userId}. Note: ${adminNote || 'Manual'}`,
                 ipAddress: req.ip
             });
 
-            return res.json({ message: 'Withdrawal approved successfully.', payoutId });
+            return res.json({ message: 'Withdrawal approved and balance deducted.' });
         } else {
-            // Reject - refund amount back to user wallet
+            // Reject - No refund needed because balance wasn't deducted at request
             transaction.status = 'rejected';
-            transaction.description += ` (Rejected: ${adminNote || 'No reason provided'})`;
+            transaction.description += ` (Rejected: ${adminNote || 'No reason'})`;
             await transaction.save();
 
-            const user = await User.findOne({ userId: transaction.userId });
-            if (user) {
-                user.walletBalance += transaction.amount;
-                await user.save();
-            }
-
-            // Log for auditing
+            // Log rejection
             await AuditLog.create({
                 adminId: req.user.userId,
                 adminEmail: req.user.email,
@@ -230,7 +198,7 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 ipAddress: req.ip
             });
 
-            res.json({ message: 'Withdrawal rejected and refunded.' });
+            return res.json({ message: 'Withdrawal rejected.' });
         }
     } catch (error) {
         res.status(500).json({ message: error.message });
