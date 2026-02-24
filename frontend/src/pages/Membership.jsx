@@ -48,9 +48,11 @@ export default function Membership() {
     useEffect(() => {
         // Initialize Cashfree
         if (window.Cashfree) {
+            const isProd = window.location.hostname === 'earningspl.com';
             setCashfree(window.Cashfree({
-                mode: "sandbox" // Change to "production" when live
+                mode: isProd ? "production" : "sandbox"
             }));
+            console.log(`Cashfree initialized in ${isProd ? 'production' : 'sandbox'} mode`);
         }
     }, []);
 

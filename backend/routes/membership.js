@@ -54,6 +54,8 @@ router.post('/buy', protect, async (req, res) => {
         const orderId = `MEM_${user.userId}_${Date.now()}`;
 
         // Try Cashfree Automated Flow
+        const isProd = req.headers.host?.includes('earningspl.com');
+
         if (isCashfreeConfigured()) {
             try {
                 const session = await createPaymentSession(orderId, cost, user);
@@ -71,7 +73,14 @@ router.post('/buy', protect, async (req, res) => {
                 });
             } catch (pgError) {
                 console.error('❌ PG Session Error:', pgError.message);
-                // Fallback to manual if PG fails
+
+                // On production, don't fallback silently if PG fails. Tell us why!
+                if (isProd) {
+                    return res.status(500).json({
+                        message: `Payment gateway error: ${pgError.message}. Please check Render environment variables or IP whitelisting.`,
+                        mode: 'error'
+                    });
+                }
             }
         }
 
