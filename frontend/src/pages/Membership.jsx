@@ -114,6 +114,12 @@ export default function Membership() {
         try {
             const res = await API.post('/membership/buy', { membershipType: type });
 
+            if (res.data.mode === 'phonepe' && res.data.redirectUrl) {
+                // ✅ PHONEPE REDIRECT FLOW
+                window.location.href = res.data.redirectUrl;
+                return;
+            }
+
             if (res.data.mode === 'automatic' && cashfreeSDK) {
                 // ✅ CASHFREE AUTOMATED CHECKOUT
                 const checkoutOptions = {

@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const { protect } = require('../middleware/auth');
 const { isCashfreeConfigured, createPaymentSession, verifyPayment } = require('../utils/cashfreePG');
+const { isPhonePeConfigured, initiatePhonePePayment, verifyPhonePePayment } = require('../utils/phonepePG');
 
 const router = express.Router();
 
@@ -55,9 +56,31 @@ router.post('/buy', protect, async (req, res) => {
 
         console.log(`[PURCHASE] Start: User ${user.userId}, Plan: ${membershipType}, Cost: ${cost}`);
 
-        // Try Cashfree Automated Flow first
+        // 1. Try PhonePe First (User Preference)
+        if (isPhonePeConfigured()) {
+            try {
+                const phonepeRes = await initiatePhonePePayment(orderId, cost, user.userId);
+
+                // Save pending info
+                user.pendingMembership = membershipType;
+                user.pendingTransactionId = orderId;
+                await user.save();
+
+                return res.json({
+                    mode: 'phonepe',
+                    redirectUrl: phonepeRes.url,
+                    orderId: orderId,
+                    membershipType
+                });
+            } catch (phonepeError) {
+                console.error('❌ [PURCHASE] PhonePe Error:', phonepeError.message);
+                // Fall through to Cashfree or Manual
+            }
+        }
+
+        // 2. Try Cashfree Automated Flow
         const pgConfigured = isCashfreeConfigured();
-        console.log(`[PURCHASE] PG Configured: ${pgConfigured}`);
+        console.log(`[PURCHASE] PG (Cashfree) Configured: ${pgConfigured}`);
 
         if (pgConfigured) {
             try {
@@ -79,9 +102,8 @@ router.post('/buy', protect, async (req, res) => {
                 console.error('❌ [PURCHASE] PG Error, falling back to manual:', pgError.message);
                 // Fall through to manual below
             }
-        } else {
-            console.log(`[PURCHASE] PG not configured, using manual payment`);
         }
+
 
         // Manual Fallback
         res.json({
@@ -133,14 +155,22 @@ router.post('/submit-transaction', protect, async (req, res) => {
 // POST /api/membership/verify-order
 router.post('/verify-order', protect, async (req, res) => {
     try {
-        const { orderId, membershipType } = req.body;
+        const { orderId } = req.body;
         const user = await User.findOne({ userId: req.user.userId });
 
         if (!user || user.pendingTransactionId !== orderId) {
             return res.status(400).json({ success: false, message: 'Invalid order or request mismatch.' });
         }
 
-        const status = await verifyPayment(orderId);
+        let status = 'PENDING';
+
+        // Check PhonePe status if configured
+        if (isPhonePeConfigured()) {
+            status = await verifyPhonePePayment(orderId);
+        } else {
+            // Default to Cashfree
+            status = await verifyPayment(orderId);
+        }
 
         if (status === 'PAID') {
             await processMembershipApproval(user.userId);
@@ -153,6 +183,39 @@ router.post('/verify-order', protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+/**
+ * PhonePe Server-to-Server Callback
+ * Always ensure your backend server exposes this publicly
+ */
+router.post('/phonepe-callback', async (req, res) => {
+    try {
+        const { response } = req.body;
+        const decoded = JSON.parse(Buffer.from(response, 'base64').toString('utf-8'));
+
+        console.log('[PHONEPE CALLBACK] Decoded:', decoded);
+
+        if (decoded.success && decoded.code === 'PAYMENT_SUCCESS') {
+            const orderId = decoded.data.merchantTransactionId;
+            const amount = decoded.data.amount / 100;
+            const phonepeTxnId = decoded.data.transactionId;
+
+            // Find user by orderId
+            const user = await User.findOne({ pendingTransactionId: orderId });
+            if (user && user.membershipApproved === false) {
+                console.log(`[PHONEPE CALLBACK] Auto-approving membership for User ${user.userId}`);
+                await processMembershipApproval(user.userId);
+            }
+        }
+
+        // PhonePe expects 200 OK
+        res.status(200).send('OK');
+    } catch (error) {
+        console.error('[PHONEPE CALLBACK] Error:', error.message);
+        res.status(500).send('ERROR');
+    }
+});
+
 
 // Process membership approval (called by admin route)
 const processMembershipApproval = async (userId) => {
