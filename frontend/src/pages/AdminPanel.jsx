@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiActivity, FiUsers, FiCheckCircle, FiXCircle, FiUserCheck, FiUserX, FiCopy } from 'react-icons/fi';
+import { FiArrowLeft, FiActivity, FiUsers, FiCheckCircle, FiXCircle, FiUserCheck, FiUserX, FiRefreshCw } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
@@ -16,6 +16,8 @@ export default function AdminPanel() {
     const [activeUsers, setActiveUsers] = useState([]);
     const [inactiveUsers, setInactiveUsers] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [rejectNote, setRejectNote] = useState('');
+    const [rejectTarget, setRejectTarget] = useState(null);
 
     useEffect(() => { loadTabData(tab); }, [tab]);
 
@@ -45,9 +47,7 @@ export default function AdminPanel() {
                 setInactiveUsers(Array.isArray(res.data) ? res.data : []);
             }
         } catch (err) {
-            const msg = err.response?.data?.message || 'Failed to load data';
-            toast.error(msg);
-            console.error('Admin Fetch Error:', err);
+            toast.error(err.response?.data?.message || 'Failed to load data');
         }
     };
 
@@ -55,27 +55,19 @@ export default function AdminPanel() {
         setLoading(true);
         try {
             await API.post('/admin/approve-membership', { userId, action });
-            toast.success(`Membership ${action}d for ${userId}`);
+            toast.success(`Membership ${action === 'approve' ? 'approved ✅' : 'rejected ❌'} for User ${userId}`);
             loadTabData('approvals');
-        } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed');
+        }
         setLoading(false);
     };
 
-    const approveWithdrawal = async (transactionId, action, forcedMode = null) => {
-        let mode = forcedMode;
-
-        if (action === 'approve' && !mode) {
-            const choice = window.confirm(
-                "How would you like to approve this withdrawal?\n\n" +
-                "Click OK for AUTOMATED BANK TRANSFER (via Cashfree)\n" +
-                "Click CANCEL for MANUAL TRANSFER (already sent via PhonePe/GPay)"
-            );
-            mode = choice ? 'auto' : 'manual';
-        }
-
-        const note = window.prompt(`Enter a note for this ${action}:`) || '';
-        if (action === 'reject' && !note) {
-            return toast.error('Please provide a reason for rejection.');
+    // Manual approval — no popup, just appove directly
+    const approveWithdrawal = async (transactionId, action) => {
+        if (action === 'reject' && !rejectNote) {
+            setRejectTarget(transactionId);
+            return;
         }
 
         setLoading(true);
@@ -83,35 +75,21 @@ export default function AdminPanel() {
             await API.post('/admin/approve-withdrawal', {
                 transactionId,
                 action,
-                adminNote: note,
-                mode: mode
+                adminNote: rejectNote || 'Approved by admin',
+                mode: 'manual'  // always manual — no Cashfree payout confusion
             });
-            toast.success(`Withdrawal ${action === 'approve' ? 'approved' : 'rejected'}`);
+            toast.success(action === 'approve' ? '✅ Withdrawal approved! Wallet deducted.' : '❌ Withdrawal rejected.');
+            setRejectNote('');
+            setRejectTarget(null);
             loadTabData('approvals');
         } catch (err) {
-            const data = err.response?.data;
-            if (data?.canManual) {
-                if (window.confirm(`${data.message}\n\nWould you like to approve MANUALLY instead? (Choose this ONLY if you have already sent the money via UPI manually)`)) {
-                    approveWithdrawal(transactionId, 'approve', 'manual');
-                }
-            } else {
-                toast.error(data?.message || 'Action failed');
-            }
+            toast.error(err.response?.data?.message || 'Action failed');
         }
         setLoading(false);
     };
 
-    const resetBalance = async () => {
-        setLoading(true);
-        try {
-            const res = await API.post('/admin/reset-my-balance');
-            toast.success(res.data.message);
-            loadTabData('dashboard');
-        } catch (err) { toast.error('Failed'); }
-        setLoading(false);
-    };
-
     const deactivateInactive = async () => {
+        if (!window.confirm('This will mark all users inactive for 30+ days. Continue?')) return;
         try {
             const res = await API.post('/admin/deactivate-inactive');
             toast.success(res.data.message);
@@ -119,36 +97,55 @@ export default function AdminPanel() {
         } catch (err) { toast.error('Failed'); }
     };
 
+    const TABS = [
+        { id: 'dashboard', label: '📊 Dashboard' },
+        { id: 'approvals', label: '✅ Approvals' },
+        { id: 'users', label: '👥 All Users' },
+        { id: 'lines', label: '🔗 Lines' },
+        { id: 'active', label: '🟢 Active' },
+        { id: 'inactive', label: '🔴 Inactive' },
+    ];
+
     return (
         <div className="admin-wrapper page-wrapper">
-            {/* ADMIN HEADER */}
+            {/* HEADER */}
             <header className="app-header">
                 <div className="header-left">
-                    <div className="header-brand">ADMIN CONTROL</div>
-                    <div className="header-welcome">Hello, <strong>{user?.firstName}</strong></div>
+                    <div className="header-brand">⚙️ ADMIN PANEL</div>
+                    <div className="header-welcome">
+                        Welcome, <strong>{user?.firstName}</strong>
+                        <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-muted)' }}>
+                            (ID: {user?.userId})
+                        </span>
+                    </div>
                 </div>
                 <div className="header-right">
-                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/home')}>
-                        <FiArrowLeft /> BACK TO HOME
+                    <button className="btn btn-secondary btn-sm" onClick={() => loadTabData(tab)}>
+                        <FiRefreshCw /> Refresh
                     </button>
-                    <button className="btn btn-danger btn-sm" onClick={deactivateInactive} title="Deactivate users inactive for 30+ days">
-                        <FiUserX /> CLEAN INACTIVE
+                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/home')}>
+                        <FiArrowLeft /> Home
+                    </button>
+                    <button className="btn btn-danger btn-sm" onClick={deactivateInactive}>
+                        <FiUserX /> Clean Inactive
                     </button>
                 </div>
             </header>
 
             <div className="admin-content">
+                {/* TABS */}
                 <div className="admin-tabs-scroller">
                     <div className="admin-tabs">
-                        {['dashboard', 'users', 'approvals', 'lines', 'active', 'inactive'].map(t => (
-                            <button key={t} className={`admin-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-                                {t.toUpperCase()}
+                        {TABS.map(t => (
+                            <button key={t.id} className={`admin-tab ${tab === t.id ? 'active' : ''}`}
+                                onClick={() => setTab(t.id)}>
+                                {t.label}
                             </button>
                         ))}
                     </div>
                 </div>
 
-                {/* DASHBOARD TAB */}
+                {/* ── DASHBOARD ── */}
                 {tab === 'dashboard' && dashData && (
                     <div className="admin-dashboard-view">
                         <div className="dash-summary-cards">
@@ -161,51 +158,170 @@ export default function AdminPanel() {
                                 <div className="card-value">{dashData.totalUsers}</div>
                             </div>
                             <div className="summary-card green">
-                                <div className="card-label">ACTIVE USERS</div>
+                                <div className="card-label">ACTIVE</div>
                                 <div className="card-value">{dashData.activeUsers}</div>
                             </div>
                             <div className="summary-card red">
-                                <div className="card-label">INACTIVE USERS</div>
+                                <div className="card-label">INACTIVE</div>
                                 <div className="card-value">{dashData.inactiveUsers}</div>
                             </div>
-                        </div>
-
-                        <div className="dash-lines-report" style={{ marginTop: 24 }}>
-                            <h3 className="section-header">NETWORK PERFORMANCE</h3>
-                            <div className="report-grid">
-                                <div className="report-box purple">
-                                    <div className="report-value">{dashData.totalDirectLines || 0}</div>
-                                    <div className="report-label">Direct Lines Active</div>
-                                </div>
-                                <div className="report-box magenta">
-                                    <div className="report-value">{dashData.totalIndirectLines || 0}</div>
-                                    <div className="report-label">Indirect Lines Active</div>
-                                </div>
-                                <div className="report-box cyan">
-                                    <div className="report-value">₹{(dashData.monthlyEarnings || 0).toFixed(2)}</div>
-                                    <div className="report-label">Monthly Velocity</div>
-                                </div>
+                            <div className="summary-card purple">
+                                <div className="card-label">MONTHLY EARNINGS</div>
+                                <div className="card-value">₹{(dashData.monthlyEarnings || 0).toFixed(2)}</div>
                             </div>
-                        </div>
-
-                        <div style={{ marginTop: 24, textAlign: 'center' }}>
-                            <button className="btn btn-outline btn-sm" onClick={resetBalance}>
-                                ⚠️ TEST: REFUND ALL WITHDRAWALS
-                            </button>
+                            <div className="summary-card magenta">
+                                <div className="card-label">WEEKLY EARNINGS</div>
+                                <div className="card-value">₹{(dashData.weeklyEarnings || 0).toFixed(2)}</div>
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* ALL USERS TAB */}
+                {/* ── APPROVALS ── */}
+                {tab === 'approvals' && (
+                    <div className="approvals-view">
+                        {/* Rejection Modal */}
+                        {rejectTarget && (
+                            <div className="modal-overlay" onClick={() => setRejectTarget(null)}>
+                                <div className="modal-content" onClick={e => e.stopPropagation()}>
+                                    <div className="modal-header">
+                                        <div className="modal-title">Rejection Reason</div>
+                                        <button className="modal-close" onClick={() => setRejectTarget(null)}>✕</button>
+                                    </div>
+                                    <div className="form-group" style={{ marginTop: 16 }}>
+                                        <textarea className="form-input" rows={3}
+                                            placeholder="Reason for rejection..."
+                                            value={rejectNote}
+                                            onChange={e => setRejectNote(e.target.value)}
+                                            style={{ height: 'auto', resize: 'vertical' }} />
+                                    </div>
+                                    <button className="btn btn-danger btn-full"
+                                        disabled={!rejectNote.trim() || loading}
+                                        onClick={() => approveWithdrawal(rejectTarget, 'reject')}>
+                                        Confirm Reject
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* MEMBERSHIP APPROVALS */}
+                        <div className="approval-section">
+                            <h3 className="section-header purple">
+                                MEMBERSHIP REQUESTS ({approvals.pendingMemberships.length})
+                            </h3>
+                            {approvals.pendingMemberships.length === 0
+                                ? <p className="empty-msg">✅ No pending membership requests</p>
+                                : (
+                                    <div className="approval-list">
+                                        {approvals.pendingMemberships.map(u => (
+                                            <div key={u.userId} className="luxury-approval-card">
+                                                <div className="l-info">
+                                                    <div className="l-name">
+                                                        {u.firstName} {u.lastName}
+                                                        <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontSize: 13 }}>
+                                                            ID: {u.userId}
+                                                        </span>
+                                                    </div>
+                                                    <div className="l-change">
+                                                        {u.membership.toUpperCase()} → <span className="target">{u.pendingMembership.toUpperCase()}</span>
+                                                    </div>
+                                                    <div className="l-txn">Txn Ref: {u.pendingTransactionId}</div>
+                                                </div>
+                                                <div className="l-actions">
+                                                    <button className="btn btn-success" onClick={() => approveMembership(u.userId, 'approve')} disabled={loading}>
+                                                        <FiCheckCircle /> APPROVE
+                                                    </button>
+                                                    <button className="btn btn-danger" onClick={() => approveMembership(u.userId, 'reject')} disabled={loading}>
+                                                        <FiXCircle /> REJECT
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                        </div>
+
+                        {/* WITHDRAWAL APPROVALS */}
+                        <div className="approval-section" style={{ marginTop: 32 }}>
+                            <h3 className="section-header green">
+                                WITHDRAWAL REQUESTS ({approvals.pendingWithdrawals.length})
+                            </h3>
+                            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 12 }}>
+                                ⚠️ Click APPROVE only after you have manually sent the money to the user via PhonePe / GPay / UPI.
+                            </p>
+                            {approvals.pendingWithdrawals.length === 0
+                                ? <p className="empty-msg">✅ No pending withdrawal requests</p>
+                                : (
+                                    <div className="approval-list">
+                                        {approvals.pendingWithdrawals.map(t => (
+                                            <div key={t._id} className="luxury-approval-card">
+                                                <div className="l-info">
+                                                    <div className="l-name">
+                                                        {t.user?.firstName} {t.user?.lastName}
+                                                        <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontSize: 13 }}>
+                                                            ID: {t.userId}
+                                                        </span>
+                                                    </div>
+                                                    <div className="l-amount" style={{ fontSize: 24, fontWeight: 900, color: 'var(--gold)', margin: '4px 0' }}>
+                                                        ₹{t.amount?.toFixed(2)}
+                                                    </div>
+                                                    {t.bankDetails && (
+                                                        <div className="l-bank-summary">
+                                                            {t.bankDetails.upiId && (
+                                                                <div style={{ color: 'var(--cyan-400)', fontWeight: 700, fontSize: 15 }}>
+                                                                    📲 UPI: {t.bankDetails.upiId}
+                                                                </div>
+                                                            )}
+                                                            {t.bankDetails.accountNumber && (
+                                                                <div>
+                                                                    🏦 {t.bankDetails.bankName} — Acc: {t.bankDetails.accountNumber} | IFSC: {t.bankDetails.ifscCode}
+                                                                </div>
+                                                            )}
+                                                            <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                                                                Holder: {t.bankDetails.accountHolderName}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                                                        Requested: {new Date(t.createdAt).toLocaleString('en-IN')}
+                                                    </div>
+                                                </div>
+                                                <div className="l-actions">
+                                                    <button className="btn btn-success"
+                                                        onClick={() => approveWithdrawal(t._id, 'approve')}
+                                                        disabled={loading}>
+                                                        <FiCheckCircle /> APPROVE
+                                                        <span style={{ display: 'block', fontSize: 10, fontWeight: 400 }}>
+                                                            (Manual)
+                                                        </span>
+                                                    </button>
+                                                    <button className="btn btn-danger"
+                                                        onClick={() => {
+                                                            setRejectTarget(t._id);
+                                                            setRejectNote('');
+                                                        }}
+                                                        disabled={loading}>
+                                                        <FiXCircle /> REJECT
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                        </div>
+                    </div>
+                )}
+
+                {/* ── ALL USERS ── */}
                 {tab === 'users' && (
                     <div className="admin-table-container">
                         <table className="admin-data-table">
                             <thead>
                                 <tr>
-                                    <th>USER ID</th>
+                                    <th>ID</th>
                                     <th>NAME</th>
-                                    <th>CONTACT INFO</th>
-                                    <th>SECURITY</th>
+                                    <th>EMAIL</th>
+                                    <th>PHONE</th>
                                     <th>WALLET</th>
                                     <th>RANK</th>
                                     <th>STATUS</th>
@@ -216,18 +332,13 @@ export default function AdminPanel() {
                                     <tr key={u.userId}>
                                         <td className="id-cell">{u.userId}</td>
                                         <td className="name-cell">{u.firstName} {u.lastName}</td>
-                                        <td>
-                                            <div className="info-sub">{u.email}</div>
-                                            <div className="info-sub">{u.phone}</div>
-                                        </td>
-                                        <td>
-                                            <div className="secure-badge">PASSPHRASE: [ENCRYPTED]</div>
-                                        </td>
+                                        <td><div className="info-sub">{u.email}</div></td>
+                                        <td><div className="info-sub">{u.phone}</div></td>
                                         <td className="wallet-cell">₹{(u.walletBalance || 0).toFixed(2)}</td>
-                                        <td><span className={`rank-tag ${u.membership}`}>{u.membership.toUpperCase()}</span></td>
+                                        <td><span className={`rank-tag ${u.membership}`}>{u.membership?.toUpperCase()}</span></td>
                                         <td>
                                             <span className={`status-dot ${u.isActive ? 'active' : 'inactive'}`}></span>
-                                            {u.isActive ? 'Active' : 'Deactivated'}
+                                            {u.isActive ? 'Active' : 'Inactive'}
                                         </td>
                                     </tr>
                                 ))}
@@ -236,59 +347,7 @@ export default function AdminPanel() {
                     </div>
                 )}
 
-                {/* APPROVALS TAB */}
-                {tab === 'approvals' && (
-                    <div className="approvals-view">
-                        <div className="approval-section">
-                            <h3 className="section-header purple">MEMBERSHIP REQUESTS ({approvals.pendingMemberships.length})</h3>
-                            {approvals.pendingMemberships.length === 0 ? <p className="empty-msg">No pending requests</p> : (
-                                <div className="approval-list">
-                                    {approvals.pendingMemberships.map(u => (
-                                        <div key={u.userId} className="luxury-approval-card">
-                                            <div className="l-info">
-                                                <div className="l-name">{u.firstName} {u.lastName} (ID: {u.userId})</div>
-                                                <div className="l-change">{u.membership.toUpperCase()} → <span className="target">{u.pendingMembership.toUpperCase()}</span></div>
-                                                <div className="l-txn">REF: {u.pendingTransactionId}</div>
-                                            </div>
-                                            <div className="l-actions">
-                                                <button className="btn btn-success" onClick={() => approveMembership(u.userId, 'approve')} disabled={loading}>APPROVE</button>
-                                                <button className="btn btn-danger" onClick={() => approveMembership(u.userId, 'reject')} disabled={loading}>REJECT</button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="approval-section" style={{ marginTop: 32 }}>
-                            <h3 className="section-header green">WITHDRAWAL REQUESTS ({approvals.pendingWithdrawals.length})</h3>
-                            {approvals.pendingWithdrawals.length === 0 ? <p className="empty-msg">No pending withdrawals</p> : (
-                                <div className="approval-list">
-                                    {approvals.pendingWithdrawals.map(t => (
-                                        <div key={t._id} className="luxury-approval-card">
-                                            <div className="l-info">
-                                                <div className="l-name">{t.user?.firstName} {t.user?.lastName} (ID: {t.userId})</div>
-                                                <div className="l-amount">₹{t.amount.toFixed(2)}</div>
-                                                {t.bankDetails && (
-                                                    <div className="l-bank-summary">
-                                                        <div>{t.bankDetails.bankName} - {t.bankDetails.accountNumber}</div>
-                                                        {t.bankDetails.upiId && <div className="upi">UPI: {t.bankDetails.upiId}</div>}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="l-actions">
-                                                <button className="btn btn-success" onClick={() => approveWithdrawal(t._id, 'approve')} disabled={loading}>APPROVE</button>
-                                                <button className="btn btn-danger" onClick={() => approveWithdrawal(t._id, 'reject')} disabled={loading}>REJECT</button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* ALL LINES TAB */}
+                {/* ── LINES ── */}
                 {tab === 'lines' && (
                     <div className="admin-table-container">
                         <table className="admin-data-table">
@@ -296,10 +355,10 @@ export default function AdminPanel() {
                                 <tr>
                                     <th>USER ID</th>
                                     <th>NAME</th>
-                                    <th>REFERRER</th>
+                                    <th>REFERRED BY</th>
                                     <th>DIRECTS</th>
                                     <th>INDIRECTS</th>
-                                    <th>TEAM ROSTER</th>
+                                    <th>DIRECT REFERRALS</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -313,7 +372,9 @@ export default function AdminPanel() {
                                         <td>
                                             <div className="team-roster">
                                                 {u.directReferrals?.map(r => (
-                                                    <span key={r.userId} className="roster-item">{r.firstName} ({r.userId})</span>
+                                                    <span key={r.userId} className="roster-item">
+                                                        {r.firstName} ({r.userId})
+                                                    </span>
                                                 ))}
                                             </div>
                                         </td>
@@ -324,17 +385,18 @@ export default function AdminPanel() {
                     </div>
                 )}
 
-                {/* ACTIVE TAB */}
+                {/* ── ACTIVE USERS ── */}
                 {tab === 'active' && (
                     <div className="admin-table-container">
                         <table className="admin-data-table">
-                            <thead><tr><th>USER ID</th><th>NAME</th><th>RANK</th></tr></thead>
+                            <thead><tr><th>USER ID</th><th>NAME</th><th>RANK</th><th>WALLET</th></tr></thead>
                             <tbody>
                                 {activeUsers.map(u => (
                                     <tr key={u.userId}>
                                         <td className="id-cell">{u.userId}</td>
                                         <td>{u.firstName} {u.lastName}</td>
-                                        <td><span className={`rank-tag ${u.membership}`}>{u.membership.toUpperCase()}</span></td>
+                                        <td><span className={`rank-tag ${u.membership}`}>{u.membership?.toUpperCase()}</span></td>
+                                        <td>₹{(u.walletBalance || 0).toFixed(2)}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -342,7 +404,7 @@ export default function AdminPanel() {
                     </div>
                 )}
 
-                {/* INACTIVE TAB */}
+                {/* ── INACTIVE USERS ── */}
                 {tab === 'inactive' && (
                     <div className="admin-table-container">
                         <table className="admin-data-table">
@@ -352,8 +414,8 @@ export default function AdminPanel() {
                                     <tr key={u.userId}>
                                         <td className="id-cell">{u.userId}</td>
                                         <td>{u.firstName} {u.lastName}</td>
-                                        <td><span className={`rank-tag ${u.membership}`}>{u.membership.toUpperCase()}</span></td>
-                                        <td>{new Date(u.lastActiveDate).toLocaleDateString()}</td>
+                                        <td><span className={`rank-tag ${u.membership}`}>{u.membership?.toUpperCase()}</span></td>
+                                        <td>{new Date(u.lastActiveDate).toLocaleDateString('en-IN')}</td>
                                     </tr>
                                 ))}
                             </tbody>

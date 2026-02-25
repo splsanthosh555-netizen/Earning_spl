@@ -191,22 +191,26 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
 
             const { isCashfreeConfigured, createCashfreePayout } = require('../utils/cashfreePayout');
             let payoutId = 'MANUAL';
+            let payoutMode = 'manual';
 
-            // Try Automatic Payout
+            // Only attempt Cashfree auto-payout if explicitly requested AND configured
             if (mode === 'auto' && isCashfreeConfigured()) {
                 try {
                     const payout = await createCashfreePayout(user, bankDetails, transaction.amount);
                     payoutId = payout.id;
+                    payoutMode = 'auto';
                     transaction.description += ` (Auto Payout: ${payoutId})`;
+                    console.log(`✅ Auto payout success: ${payoutId}`);
                 } catch (payoutError) {
                     const errorMsg = payoutError.response?.data?.message || payoutError.message;
-                    console.error('❌ Automated Payout Failed:', errorMsg);
-                    return res.status(500).json({
-                        message: `Automated Payout Failed: ${errorMsg}. You can try Manual Approval instead.`,
-                        canManual: true
-                    });
+                    console.error('❌ Automated Payout Failed, falling back to manual:', errorMsg);
+                    // Gracefully fall back to manual instead of returning error
+                    payoutMode = 'manual';
+                    transaction.description += ` (Auto Payout Failed: ${errorMsg} — Manually Approved)`;
                 }
             } else {
+                // Cashfree not configured or manual mode requested
+                console.log(`ℹ️ Manual payout approval for user ${user.userId}`);
                 transaction.description += ' (Manual Payout Approved by Admin)';
             }
 
