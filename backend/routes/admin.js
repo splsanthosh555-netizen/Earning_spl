@@ -343,4 +343,30 @@ router.post('/reset-my-balance', protect, adminOnly, async (req, res) => {
     }
 });
 
+// GET /api/admin/transactions
+router.get('/transactions', protect, adminOnly, async (req, res) => {
+    try {
+        const { type, status } = req.query;
+        let query = {};
+        if (type) query.type = type;
+        if (status) query.status = { $in: status.split(',') };
+
+        const transactions = await Transaction.find(query)
+            .sort({ updatedAt: -1 })
+            .limit(200);
+
+        // Populate user details manually since model might not have refs
+        const details = await Promise.all(
+            transactions.map(async (t) => {
+                const user = await User.findOne({ userId: t.userId }).select('userId firstName lastName');
+                return { ...t.toObject(), user };
+            })
+        );
+
+        res.json(details);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;

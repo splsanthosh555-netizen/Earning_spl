@@ -15,6 +15,7 @@ export default function AdminPanel() {
     const [lines, setLines] = useState([]);
     const [activeUsers, setActiveUsers] = useState([]);
     const [inactiveUsers, setInactiveUsers] = useState([]);
+    const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(false);
     const [processingIds, setProcessingIds] = useState(new Set()); // per-card loading
     const [rejectNote, setRejectNote] = useState('');
@@ -50,6 +51,9 @@ export default function AdminPanel() {
             } else if (currentTab === 'inactive') {
                 const res = await API.get('/admin/inactive-users');
                 setInactiveUsers(Array.isArray(res.data) ? res.data : []);
+            } else if (currentTab === 'history') {
+                const res = await API.get('/admin/transactions?type=withdrawal&status=completed,rejected');
+                setHistory(Array.isArray(res.data) ? res.data : []);
             }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to load data');
@@ -132,6 +136,7 @@ export default function AdminPanel() {
         { id: 'lines', label: '🔗 Lines' },
         { id: 'active', label: '🟢 Active' },
         { id: 'inactive', label: '🔴 Inactive' },
+        { id: 'history', label: '📜 History' },
     ];
 
     return (
@@ -451,6 +456,43 @@ export default function AdminPanel() {
                                         <td>{new Date(u.lastActiveDate).toLocaleDateString('en-IN')}</td>
                                     </tr>
                                 ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+                {/* ── HISTORY ── */}
+                {tab === 'history' && (
+                    <div className="admin-table-container">
+                        <table className="admin-data-table">
+                            <thead>
+                                <tr>
+                                    <th>DATE</th>
+                                    <th>USER</th>
+                                    <th>AMOUNT</th>
+                                    <th>DETAILS</th>
+                                    <th>STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {history.map(t => (
+                                    <tr key={t._id}>
+                                        <td>{new Date(t.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                                        <td>
+                                            <div className="name-cell">{t.user?.firstName} {t.user?.lastName}</div>
+                                            <div className="info-sub">ID: {t.userId}</div>
+                                        </td>
+                                        <td className="wallet-cell" style={{ color: 'var(--gold)' }}>₹{t.amount?.toFixed(2)}</td>
+                                        <td>
+                                            <div className="info-sub" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{t.description}</div>
+                                            {t.adminNote && <div className="info-sub" style={{ fontStyle: 'italic' }}>Note: {t.adminNote}</div>}
+                                        </td>
+                                        <td>
+                                            <span className={`status-dot ${t.status === 'completed' ? 'active' : 'inactive'}`}></span>
+                                            {t.status.toUpperCase()}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {history.length === 0 && <tr><td colSpan="5" className="empty-msg">No history found</td></tr>}
                             </tbody>
                         </table>
                     </div>
