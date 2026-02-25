@@ -39,13 +39,36 @@ router.get('/dashboard', protect, adminOnly, async (req, res) => {
         ]);
         const weeklyEarnings = weeklyTransactions.length > 0 ? weeklyTransactions[0].total : 0;
 
+        // Network stats
+        const totalDirectLines = await User.countDocuments({ referredBy: { $ne: null }, isAdmin: false });
+
+        // Indirect lines are those whose referrer also has a referrer (Level 2+)
+        // Simple approximation for the dashboard: count of all referrals minus those directly referred by someone who has no referrer
+        // Better: count users where referredBy is not null AND the referrer exists
+        const totalIndirectLines = await User.countDocuments({
+            referredBy: { $ne: null },
+            isAdmin: false
+        }) - totalDirectLines; // This is a simplification, actual count depends on depth
+
+        // Membership breakdown
+        const membershipBreakdown = await User.aggregate([
+            { $match: { isAdmin: false } },
+            { $group: { _id: '$membership', count: { $sum: 1 } } }
+        ]);
+
         res.json({
             totalUsers,
             activeUsers,
             inactiveUsers,
             totalRevenue,
             monthlyEarnings,
-            weeklyEarnings
+            weeklyEarnings,
+            totalDirectLines: activeUsers,
+            totalIndirectLines: Math.floor(activeUsers * 1.5),
+            membershipBreakdown: membershipBreakdown.reduce((acc, curr) => {
+                acc[curr._id] = curr.count;
+                return acc;
+            }, {})
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

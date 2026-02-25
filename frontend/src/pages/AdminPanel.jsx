@@ -120,284 +120,247 @@ export default function AdminPanel() {
     };
 
     return (
-        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 20px' }} className="animate-fade-up">
-            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/home')} style={{ marginBottom: 16 }}>
-                <FiArrowLeft /> Back
-            </button>
-
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800, marginBottom: 20 }}>
-                <FiActivity /> Admin Panel
-            </h2>
-
-            <div className="admin-tabs">
-                {['dashboard', 'users', 'approvals', 'lines', 'active', 'inactive'].map(t => (
-                    <button key={t} className={`admin-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-                        {t === 'dashboard' ? '📊 Dashboard' : t === 'users' ? '👥 All Users' :
-                            t === 'approvals' ? '✅ Approvals' : t === 'lines' ? '🔗 All Lines' :
-                                t === 'active' ? '🟢 Active' : '🔴 Inactive'}
+        <div className="admin-wrapper page-wrapper">
+            {/* ADMIN HEADER */}
+            <header className="app-header">
+                <div className="header-left">
+                    <div className="header-brand">ADMIN CONTROL</div>
+                    <div className="header-welcome">Hello, <strong>{user?.firstName}</strong></div>
+                </div>
+                <div className="header-right">
+                    <button className="btn btn-secondary btn-sm" onClick={() => navigate('/home')}>
+                        <FiArrowLeft /> BACK TO HOME
                     </button>
-                ))}
-            </div>
+                    <button className="btn btn-danger btn-sm" onClick={deactivateInactive} title="Deactivate users inactive for 30+ days">
+                        <FiUserX /> CLEAN INACTIVE
+                    </button>
+                </div>
+            </header>
 
-            {/* DASHBOARD TAB */}
-            {tab === 'dashboard' && dashData && (
-                <div>
-                    <div className="dashboard-grid">
-                        <div className="dash-card">
-                            <div className="dash-card-icon">💰</div>
-                            <div className="dash-card-value" style={{ color: 'var(--green-400)' }}>₹{(dashData.totalRevenue || 0).toFixed(2)}</div>
-                            <div className="dash-card-label">Total Revenue</div>
-                        </div>
-                        <div className="dash-card">
-                            <div className="dash-card-icon">👥</div>
-                            <div className="dash-card-value" style={{ color: 'var(--cyan-400)' }}>{dashData.totalUsers}</div>
-                            <div className="dash-card-label">Total Users</div>
-                        </div>
-                        <div className="dash-card">
-                            <div className="dash-card-icon">🟢</div>
-                            <div className="dash-card-value" style={{ color: 'var(--green-400)' }}>{dashData.activeUsers}</div>
-                            <div className="dash-card-label">Active Users</div>
-                        </div>
-                        <div className="dash-card">
-                            <div className="dash-card-icon">🔴</div>
-                            <div className="dash-card-value" style={{ color: 'var(--red-400)' }}>{dashData.inactiveUsers}</div>
-                            <div className="dash-card-label">Inactive Users</div>
-                        </div>
-                        <div className="dash-card">
-                            <div className="dash-card-icon">📅</div>
-                            <div className="dash-card-value" style={{ color: 'var(--purple-400)' }}>₹{(dashData.monthlyEarnings || 0).toFixed(2)}</div>
-                            <div className="dash-card-label">Monthly Earnings</div>
-                        </div>
-                        <div className="dash-card">
-                            <div className="dash-card-icon">📊</div>
-                            <div className="dash-card-value" style={{ color: 'var(--gold)' }}>₹{(dashData.weeklyEarnings || 0).toFixed(2)}</div>
-                            <div className="dash-card-label">Weekly Earnings</div>
-                        </div>
-                    </div>
-                    <div style={{ marginTop: 20, display: 'flex', gap: 12 }}>
-                        <button className="btn btn-danger btn-sm" onClick={deactivateInactive}>
-                            Deactivate 30+ Day Inactive Users
-                        </button>
-                        <button className="btn btn-warning btn-sm" onClick={resetBalance}>
-                            ⚠️ TEST: Reset My Balance (Refund Withdrawals)
-                        </button>
+            <div className="admin-content">
+                <div className="admin-tabs-scroller">
+                    <div className="admin-tabs">
+                        {['dashboard', 'users', 'approvals', 'lines', 'active', 'inactive'].map(t => (
+                            <button key={t} className={`admin-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+                                {t.toUpperCase()}
+                            </button>
+                        ))}
                     </div>
                 </div>
-            )}
 
-            {/* ALL USERS TAB */}
-            {tab === 'users' && (
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="admin-table">
-                        <thead>
-                            <tr>
-                                <th>User ID</th><th>Name</th><th>Email</th><th>Phone</th>
-                                <th>Membership</th><th>Wallet</th><th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {users.map(u => (
-                                <tr key={u.userId}>
-                                    <td style={{ fontFamily: 'monospace', color: 'var(--cyan-400)' }}>{u.userId}</td>
-                                    <td>{u.firstName} {u.lastName}</td>
-                                    <td>{u.email}</td>
-                                    <td>{u.phone}</td>
-                                    <td style={{ textTransform: 'capitalize' }}>{u.membership}</td>
-                                    <td style={{ fontFamily: 'monospace' }}>₹{(u.walletBalance || 0).toFixed(2)}</td>
-                                    <td>{u.isActive ?
-                                        <span style={{ color: 'var(--green-400)' }}>Active</span> :
-                                        <span style={{ color: 'var(--red-400)' }}>Inactive</span>
-                                    }</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                {/* DASHBOARD TAB */}
+                {tab === 'dashboard' && dashData && (
+                    <div className="admin-dashboard-view">
+                        <div className="dash-summary-cards">
+                            <div className="summary-card gold">
+                                <div className="card-label">TOTAL REVENUE</div>
+                                <div className="card-value">₹{(dashData.totalRevenue || 0).toFixed(2)}</div>
+                            </div>
+                            <div className="summary-card cyan">
+                                <div className="card-label">TOTAL USERS</div>
+                                <div className="card-value">{dashData.totalUsers}</div>
+                            </div>
+                            <div className="summary-card green">
+                                <div className="card-label">ACTIVE USERS</div>
+                                <div className="card-value">{dashData.activeUsers}</div>
+                            </div>
+                            <div className="summary-card red">
+                                <div className="card-label">INACTIVE USERS</div>
+                                <div className="card-value">{dashData.inactiveUsers}</div>
+                            </div>
+                        </div>
 
-            {/* APPROVALS TAB */}
-            {tab === 'approvals' && (
-                <div>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: 'var(--purple-400)' }}>
-                        Membership Approvals ({approvals.pendingMemberships.length})
-                    </h3>
-                    {approvals.pendingMemberships.length === 0 ? (
-                        <p style={{ color: 'var(--text-muted)', marginBottom: 20 }}>No pending memberships</p>
-                    ) : (
-                        approvals.pendingMemberships.map(u => (
-                            <div key={u.userId} className="approval-card">
-                                <div className="approval-info">
-                                    <div style={{ fontWeight: 700 }}>{u.firstName} {u.lastName}</div>
-                                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                                        ID: {u.userId} | Current: {u.membership} → {u.pendingMembership}
-                                    </div>
-                                    <div style={{ fontSize: 12, color: 'var(--cyan-400)', fontFamily: 'monospace' }}>
-                                        TXN: {u.pendingTransactionId}
-                                    </div>
+                        <div className="dash-lines-report" style={{ marginTop: 24 }}>
+                            <h3 className="section-header">NETWORK PERFORMANCE</h3>
+                            <div className="report-grid">
+                                <div className="report-box purple">
+                                    <div className="report-value">{dashData.totalDirectLines || 0}</div>
+                                    <div className="report-label">Direct Lines Active</div>
                                 </div>
-                                <div className="approval-actions">
-                                    <button className="btn btn-success btn-sm" disabled={loading}
-                                        onClick={() => approveMembership(u.userId, 'approve')}>
-                                        <FiCheckCircle /> Approve
-                                    </button>
-                                    <button className="btn btn-danger btn-sm" disabled={loading}
-                                        onClick={() => approveMembership(u.userId, 'reject')}>
-                                        <FiXCircle /> Reject
-                                    </button>
+                                <div className="report-box magenta">
+                                    <div className="report-value">{dashData.totalIndirectLines || 0}</div>
+                                    <div className="report-label">Indirect Lines Active</div>
+                                </div>
+                                <div className="report-box cyan">
+                                    <div className="report-value">₹{(dashData.monthlyEarnings || 0).toFixed(2)}</div>
+                                    <div className="report-label">Monthly Velocity</div>
                                 </div>
                             </div>
-                        ))
-                    )}
+                        </div>
 
-                    <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, marginTop: 24, color: 'var(--green-400)' }}>
-                        Withdrawal Approvals ({approvals.pendingWithdrawals.length})
-                    </h3>
-                    {approvals.pendingWithdrawals.length === 0 ? (
-                        <p style={{ color: 'var(--text-muted)' }}>No pending withdrawals</p>
-                    ) : (
-                        approvals.pendingWithdrawals.map(t => (
-                            <div key={t._id} className="approval-card">
-                                <div className="approval-info">
-                                    <div style={{ fontWeight: 700 }}>{t.user?.firstName} {t.user?.lastName}</div>
-                                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                                        ID: {t.userId} | Amount: ₹{t.amount.toFixed(2)}
-                                    </div>
-                                    {t.bankDetails && (
-                                        <div style={{
-                                            fontSize: 12, background: 'rgba(255,255,255,0.05)',
-                                            padding: '10px 12px', borderRadius: 8, margin: '10px 0',
-                                            border: '1px solid var(--border-glass)'
-                                        }}>
-                                            {/* Bank Section */}
-                                            <div style={{ marginBottom: t.bankDetails.upiId ? 12 : 0 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                                                    <span style={{ color: 'var(--text-main)', fontWeight: 700, fontSize: 13 }}>🏦 Bank Account</span>
-                                                    <button className="btn-icon" onClick={() => {
-                                                        const text = `Bank: ${t.bankDetails.bankName}, A/C: ${t.bankDetails.accountNumber}, IFSC: ${t.bankDetails.ifscCode}`;
-                                                        navigator.clipboard.writeText(text);
-                                                        toast.success('Bank details copied!');
-                                                    }} title="Copy Bank Details">
-                                                        <FiCopy size={13} />
-                                                    </button>
-                                                </div>
-                                                <div style={{ color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                                                    {t.bankDetails.accountHolderName}<br />
-                                                    {t.bankDetails.bankName}<br />
-                                                    <span style={{ color: 'var(--cyan-400)', fontFamily: 'monospace' }}>A/C: {t.bankDetails.accountNumber}</span><br />
-                                                    <span style={{ color: 'var(--cyan-400)', fontFamily: 'monospace' }}>IFSC: {t.bankDetails.ifscCode}</span>
-                                                </div>
+                        <div style={{ marginTop: 24, textAlign: 'center' }}>
+                            <button className="btn btn-outline btn-sm" onClick={resetBalance}>
+                                ⚠️ TEST: REFUND ALL WITHDRAWALS
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ALL USERS TAB */}
+                {tab === 'users' && (
+                    <div className="admin-table-container">
+                        <table className="admin-data-table">
+                            <thead>
+                                <tr>
+                                    <th>USER ID</th>
+                                    <th>NAME</th>
+                                    <th>CONTACT INFO</th>
+                                    <th>SECURITY</th>
+                                    <th>WALLET</th>
+                                    <th>RANK</th>
+                                    <th>STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {users.map(u => (
+                                    <tr key={u.userId}>
+                                        <td className="id-cell">{u.userId}</td>
+                                        <td className="name-cell">{u.firstName} {u.lastName}</td>
+                                        <td>
+                                            <div className="info-sub">{u.email}</div>
+                                            <div className="info-sub">{u.phone}</div>
+                                        </td>
+                                        <td>
+                                            <div className="secure-badge">PASSPHRASE: [ENCRYPTED]</div>
+                                        </td>
+                                        <td className="wallet-cell">₹{(u.walletBalance || 0).toFixed(2)}</td>
+                                        <td><span className={`rank-tag ${u.membership}`}>{u.membership.toUpperCase()}</span></td>
+                                        <td>
+                                            <span className={`status-dot ${u.isActive ? 'active' : 'inactive'}`}></span>
+                                            {u.isActive ? 'Active' : 'Deactivated'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {/* APPROVALS TAB */}
+                {tab === 'approvals' && (
+                    <div className="approvals-view">
+                        <div className="approval-section">
+                            <h3 className="section-header purple">MEMBERSHIP REQUESTS ({approvals.pendingMemberships.length})</h3>
+                            {approvals.pendingMemberships.length === 0 ? <p className="empty-msg">No pending requests</p> : (
+                                <div className="approval-list">
+                                    {approvals.pendingMemberships.map(u => (
+                                        <div key={u.userId} className="luxury-approval-card">
+                                            <div className="l-info">
+                                                <div className="l-name">{u.firstName} {u.lastName} (ID: {u.userId})</div>
+                                                <div className="l-change">{u.membership.toUpperCase()} → <span className="target">{u.pendingMembership.toUpperCase()}</span></div>
+                                                <div className="l-txn">REF: {u.pendingTransactionId}</div>
                                             </div>
-
-                                            {/* UPI Section */}
-                                            {t.bankDetails.upiId && (
-                                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10, marginTop: 10 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                                                        <span style={{ color: 'var(--purple-400)', fontWeight: 700, fontSize: 13 }}>📱 UPI ID</span>
-                                                        <button className="btn-icon" onClick={() => {
-                                                            navigator.clipboard.writeText(t.bankDetails.upiId);
-                                                            toast.success('UPI ID copied!');
-                                                        }} title="Copy UPI ID">
-                                                            <FiCopy size={13} />
-                                                        </button>
-                                                    </div>
-                                                    <div style={{ color: 'var(--cyan-400)', fontWeight: 600, fontFamily: 'monospace' }}>
-                                                        {t.bankDetails.upiId}
-                                                    </div>
-                                                </div>
-                                            )}
+                                            <div className="l-actions">
+                                                <button className="btn btn-success" onClick={() => approveMembership(u.userId, 'approve')} disabled={loading}>APPROVE</button>
+                                                <button className="btn btn-danger" onClick={() => approveMembership(u.userId, 'reject')} disabled={loading}>REJECT</button>
+                                            </div>
                                         </div>
-                                    )}
-                                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                        {new Date(t.createdAt).toLocaleString()}
-                                    </div>
+                                    ))}
                                 </div>
-                                <div className="approval-actions">
-                                    <button className="btn btn-success btn-sm" disabled={loading}
-                                        onClick={() => approveWithdrawal(t._id, 'approve')}>
-                                        <FiCheckCircle /> Approve
-                                    </button>
-                                    <button className="btn btn-danger btn-sm" disabled={loading}
-                                        onClick={() => approveWithdrawal(t._id, 'reject')}>
-                                        <FiXCircle /> Reject
-                                    </button>
+                            )}
+                        </div>
+
+                        <div className="approval-section" style={{ marginTop: 32 }}>
+                            <h3 className="section-header green">WITHDRAWAL REQUESTS ({approvals.pendingWithdrawals.length})</h3>
+                            {approvals.pendingWithdrawals.length === 0 ? <p className="empty-msg">No pending withdrawals</p> : (
+                                <div className="approval-list">
+                                    {approvals.pendingWithdrawals.map(t => (
+                                        <div key={t._id} className="luxury-approval-card">
+                                            <div className="l-info">
+                                                <div className="l-name">{t.user?.firstName} {t.user?.lastName} (ID: {t.userId})</div>
+                                                <div className="l-amount">₹{t.amount.toFixed(2)}</div>
+                                                {t.bankDetails && (
+                                                    <div className="l-bank-summary">
+                                                        <div>{t.bankDetails.bankName} - {t.bankDetails.accountNumber}</div>
+                                                        {t.bankDetails.upiId && <div className="upi">UPI: {t.bankDetails.upiId}</div>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="l-actions">
+                                                <button className="btn btn-success" onClick={() => approveWithdrawal(t._id, 'approve')} disabled={loading}>APPROVE</button>
+                                                <button className="btn btn-danger" onClick={() => approveWithdrawal(t._id, 'reject')} disabled={loading}>REJECT</button>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-            )}
+                            )}
+                        </div>
+                    </div>
+                )}
 
-            {/* ALL LINES TAB */}
-            {tab === 'lines' && (
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="admin-table">
-                        <thead>
-                            <tr>
-                                <th>User ID</th><th>Name</th><th>Referred By</th>
-                                <th>Direct</th><th>Indirect</th><th>Direct Referrals</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {lines.map(u => (
-                                <tr key={u.userId}>
-                                    <td style={{ fontFamily: 'monospace', color: 'var(--cyan-400)' }}>{u.userId}</td>
-                                    <td>{u.firstName} {u.lastName}</td>
-                                    <td>{u.referredBy || '-'}</td>
-                                    <td>{u.directReferralCount}</td>
-                                    <td>{u.indirectReferralCount}</td>
-                                    <td>
-                                        {u.directReferrals?.map(r => (
-                                            <span key={r.userId} style={{
-                                                display: 'inline-block', padding: '2px 8px', background: 'var(--bg-glass)',
-                                                borderRadius: 4, margin: 2, fontSize: 12
-                                            }}>
-                                                {r.firstName} ({r.userId})
-                                            </span>
-                                        ))}
-                                    </td>
+                {/* ALL LINES TAB */}
+                {tab === 'lines' && (
+                    <div className="admin-table-container">
+                        <table className="admin-data-table">
+                            <thead>
+                                <tr>
+                                    <th>USER ID</th>
+                                    <th>NAME</th>
+                                    <th>REFERRER</th>
+                                    <th>DIRECTS</th>
+                                    <th>INDIRECTS</th>
+                                    <th>TEAM ROSTER</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                            </thead>
+                            <tbody>
+                                {lines.map(u => (
+                                    <tr key={u.userId}>
+                                        <td className="id-cell">{u.userId}</td>
+                                        <td>{u.firstName} {u.lastName}</td>
+                                        <td>{u.referredBy || 'PLATFORM'}</td>
+                                        <td>{u.directReferralCount}</td>
+                                        <td>{u.indirectReferralCount}</td>
+                                        <td>
+                                            <div className="team-roster">
+                                                {u.directReferrals?.map(r => (
+                                                    <span key={r.userId} className="roster-item">{r.firstName} ({r.userId})</span>
+                                                ))}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
 
-            {/* ACTIVE USERS TAB */}
-            {tab === 'active' && (
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="admin-table">
-                        <thead><tr><th>User ID</th><th>Name</th><th>Membership</th></tr></thead>
-                        <tbody>
-                            {activeUsers.map(u => (
-                                <tr key={u.userId}>
-                                    <td style={{ fontFamily: 'monospace', color: 'var(--cyan-400)' }}>{u.userId}</td>
-                                    <td>{u.firstName} {u.lastName}</td>
-                                    <td style={{ textTransform: 'capitalize' }}>{u.membership}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                {/* ACTIVE TAB */}
+                {tab === 'active' && (
+                    <div className="admin-table-container">
+                        <table className="admin-data-table">
+                            <thead><tr><th>USER ID</th><th>NAME</th><th>RANK</th></tr></thead>
+                            <tbody>
+                                {activeUsers.map(u => (
+                                    <tr key={u.userId}>
+                                        <td className="id-cell">{u.userId}</td>
+                                        <td>{u.firstName} {u.lastName}</td>
+                                        <td><span className={`rank-tag ${u.membership}`}>{u.membership.toUpperCase()}</span></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
 
-            {/* INACTIVE USERS TAB */}
-            {tab === 'inactive' && (
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="admin-table">
-                        <thead><tr><th>User ID</th><th>Name</th><th>Membership</th><th>Last Active</th></tr></thead>
-                        <tbody>
-                            {inactiveUsers.map(u => (
-                                <tr key={u.userId}>
-                                    <td style={{ fontFamily: 'monospace', color: 'var(--cyan-400)' }}>{u.userId}</td>
-                                    <td>{u.firstName} {u.lastName}</td>
-                                    <td style={{ textTransform: 'capitalize' }}>{u.membership}</td>
-                                    <td>{new Date(u.lastActiveDate).toLocaleDateString()}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                {/* INACTIVE TAB */}
+                {tab === 'inactive' && (
+                    <div className="admin-table-container">
+                        <table className="admin-data-table">
+                            <thead><tr><th>USER ID</th><th>NAME</th><th>RANK</th><th>LAST SEEN</th></tr></thead>
+                            <tbody>
+                                {inactiveUsers.map(u => (
+                                    <tr key={u.userId}>
+                                        <td className="id-cell">{u.userId}</td>
+                                        <td>{u.firstName} {u.lastName}</td>
+                                        <td><span className={`rank-tag ${u.membership}`}>{u.membership.toUpperCase()}</span></td>
+                                        <td>{new Date(u.lastActiveDate).toLocaleDateString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

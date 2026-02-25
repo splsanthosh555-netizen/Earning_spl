@@ -5,12 +5,10 @@ import API from '../api/axios';
 
 export default function ForgotPassword() {
     const navigate = useNavigate();
-    const [step, setStep] = useState(1);
     const [form, setForm] = useState({ userId: '', email: '', phone: '' });
     const [emailOtp, setEmailOtp] = useState('');
-    const [phoneOtp, setPhoneOtp] = useState('');
     const [emailVerified, setEmailVerified] = useState(false);
-    const [phoneVerified, setPhoneVerified] = useState(false);
+    const [emailOtpSent, setEmailOtpSent] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -18,47 +16,39 @@ export default function ForgotPassword() {
     const sendEmailOtp = async () => {
         if (!form.email) return toast.error('Enter email first');
         try {
-            const res = await API.post('/auth/send-otp', { target: form.email, type: 'email', purpose: 'reset' });
+            await API.post('/auth/send-otp', { target: form.email, type: 'email', purpose: 'forget-password' });
+            setEmailOtpSent(true);
             toast.success('OTP sent to email');
-            if (res.data.otp) toast(`Dev OTP: ${res.data.otp}`, { icon: '🔑', duration: 10000 });
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed');
+            toast.error(err.response?.data?.message || 'Failed to send OTP');
         }
     };
 
     const verifyEmailOtp = async () => {
+        if (!emailOtp) return toast.error('Enter the OTP first');
         try {
             await API.post('/auth/verify-otp', { target: form.email, type: 'email', otp: emailOtp });
             setEmailVerified(true);
             toast.success('Email verified!');
-        } catch (err) { toast.error('Invalid OTP'); }
-    };
-
-    const sendPhoneOtp = async () => {
-        if (!form.phone) return toast.error('Enter phone first');
-        try {
-            const res = await API.post('/auth/send-otp', { target: form.phone, type: 'phone', purpose: 'reset' });
-            toast.success('OTP sent to phone');
-            if (res.data.otp) toast(`Dev OTP: ${res.data.otp}`, { icon: '🔑', duration: 10000 });
-        } catch (err) { toast.error('Failed'); }
-    };
-
-    const verifyPhoneOtp = async () => {
-        try {
-            await API.post('/auth/verify-otp', { target: form.phone, type: 'phone', otp: phoneOtp });
-            setPhoneVerified(true);
-            toast.success('Phone verified!');
-        } catch (err) { toast.error('Invalid OTP'); }
+        } catch (err) { toast.error('Invalid or expired OTP'); }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!emailVerified || !phoneVerified) return toast.error('Please verify both email and phone');
+        if (!form.userId) return toast.error('Enter your User ID');
+        if (!emailVerified) return toast.error('Please verify your email first');
+        if (!form.phone) return toast.error('Enter your phone number');
+
         setLoading(true);
         try {
-            const res = await API.post('/auth/forgot-password', form);
+            const res = await API.post('/auth/verify-forget', {
+                userId: form.userId,
+                email: form.email,
+                phone: form.phone,
+                emailOtp
+            });
             localStorage.setItem('spl_reset_token', res.data.resetToken);
-            toast.success('Verified! Redirecting to reset password...');
+            toast.success('Verified! Redirecting...');
             navigate('/reset-password');
         } catch (err) {
             toast.error(err.response?.data?.message || 'Verification failed');
@@ -75,51 +65,47 @@ export default function ForgotPassword() {
                         <p>Forgot Password</p>
                     </div>
                     <form onSubmit={handleSubmit}>
+                        {/* Step 1: User ID */}
                         <div className="form-group">
                             <label className="form-label">User ID</label>
                             <input className="form-input" name="userId" placeholder="Enter your User ID"
                                 value={form.userId} onChange={handleChange} required />
                         </div>
+
+                        {/* Step 2: Email + OTP */}
                         <div className="form-group">
-                            <label className="form-label">Email</label>
+                            <label className="form-label">Registered Email</label>
                             <div className="otp-row">
-                                <input className="form-input" name="email" type="email" placeholder="your@email.com"
-                                    value={form.email} onChange={handleChange} disabled={emailVerified} required />
+                                <input className="form-input" name="email" type="email"
+                                    placeholder="your@email.com" value={form.email}
+                                    onChange={handleChange} disabled={emailVerified} required />
                                 {!emailVerified && (
-                                    <button type="button" className="btn btn-secondary btn-sm" onClick={sendEmailOtp}>Send OTP</button>
+                                    <button type="button" className="btn btn-secondary btn-sm"
+                                        onClick={sendEmailOtp}>Send OTP</button>
                                 )}
-                                {emailVerified && <span style={{ color: 'var(--green-400)' }}>✓</span>}
+                                {emailVerified && <span style={{ color: 'var(--green-400)', fontSize: 20 }}>✓</span>}
                             </div>
                         </div>
-                        {!emailVerified && (
+
+                        {emailOtpSent && !emailVerified && (
                             <div className="form-group">
                                 <div className="otp-row">
-                                    <input className="form-input" placeholder="Email OTP" value={emailOtp}
-                                        onChange={(e) => setEmailOtp(e.target.value)} maxLength={6} />
-                                    <button type="button" className="btn btn-success btn-sm" onClick={verifyEmailOtp}>Verify</button>
+                                    <input className="form-input" placeholder="Email OTP"
+                                        value={emailOtp} onChange={(e) => setEmailOtp(e.target.value)} maxLength={6} />
+                                    <button type="button" className="btn btn-success btn-sm"
+                                        onClick={verifyEmailOtp}>Verify</button>
                                 </div>
                             </div>
                         )}
+
+                        {/* Step 3: Phone */}
                         <div className="form-group">
-                            <label className="form-label">Phone Number</label>
-                            <div className="otp-row">
-                                <input className="form-input" name="phone" placeholder="Phone number"
-                                    value={form.phone} onChange={handleChange} disabled={phoneVerified} required />
-                                {!phoneVerified && (
-                                    <button type="button" className="btn btn-secondary btn-sm" onClick={sendPhoneOtp}>Send OTP</button>
-                                )}
-                                {phoneVerified && <span style={{ color: 'var(--green-400)' }}>✓</span>}
-                            </div>
+                            <label className="form-label">Registered Phone Number</label>
+                            <input className="form-input" name="phone"
+                                placeholder="Phone number registered with account"
+                                value={form.phone} onChange={handleChange} required />
                         </div>
-                        {!phoneVerified && (
-                            <div className="form-group">
-                                <div className="otp-row">
-                                    <input className="form-input" placeholder="Phone OTP" value={phoneOtp}
-                                        onChange={(e) => setPhoneOtp(e.target.value)} maxLength={6} />
-                                    <button type="button" className="btn btn-success btn-sm" onClick={verifyPhoneOtp}>Verify</button>
-                                </div>
-                            </div>
-                        )}
+
                         <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
                             {loading ? 'Verifying...' : 'Verify & Continue'}
                         </button>

@@ -8,42 +8,45 @@ const router = express.Router();
 
 
 // ======================================
-// SEND OTP (EMAIL ONLY)
+// SEND OTP (EMAIL or PHONE)
 // ======================================
 router.post('/send-otp', async (req, res) => {
     try {
         const { target, type, purpose } = req.body;
 
-        if (!target || type !== 'email') {
-            return res.status(400).json({
-                message: 'Valid email required'
-            });
+        if (!target || !type) {
+            return res.status(400).json({ message: 'Target and type required' });
         }
 
-        const cleanEmail = target.trim().toLowerCase();
+        const cleanTarget = target.trim();
 
-        // Prevent duplicate during register
-        if (purpose === 'register') {
-            const existing = await User.findOne({ email: cleanEmail });
-            if (existing) {
-                return res.status(400).json({
-                    message: 'Email already registered'
-                });
+        // Check if user exists for forget-password
+        if (purpose === 'forget-password') {
+            const user = await User.findOne({
+                [type === 'email' ? 'email' : 'phone']: type === 'email' ? cleanTarget.toLowerCase() : cleanTarget
+            });
+            if (!user) {
+                return res.status(404).json({ message: `No user found with this ${type}` });
             }
         }
 
-        const result = await sendOTP(cleanEmail, 'email');
-
-        if (!result.sent) {
-            return res.status(500).json({
-                message: 'Failed to send email OTP'
+        // Prevent duplicate during register
+        if (purpose === 'register') {
+            const existing = await User.findOne({
+                [type === 'email' ? 'email' : 'phone']: type === 'email' ? cleanTarget.toLowerCase() : cleanTarget
             });
+            if (existing) {
+                return res.status(400).json({ message: `${type.charAt(0).toUpperCase() + type.slice(1)} already registered` });
+            }
         }
 
-        res.json({
-            message: 'OTP sent successfully',
-            success: true
-        });
+        const result = await sendOTP(cleanTarget, type);
+
+        if (!result.sent) {
+            return res.status(500).json({ message: `Failed to send ${type} OTP` });
+        }
+
+        res.json({ message: 'OTP sent successfully', success: true });
 
     } catch (error) {
         console.error("SEND OTP ERROR:", error);
@@ -57,34 +60,21 @@ router.post('/send-otp', async (req, res) => {
 // ======================================
 router.post('/verify-otp', async (req, res) => {
     try {
-        const { target, otp } = req.body;
+        const { target, type, otp } = req.body;
 
-        if (!target || !otp) {
-            return res.status(400).json({
-                message: 'Email and OTP required'
-            });
+        if (!target || !type || !otp) {
+            return res.status(400).json({ message: 'Target, type, and OTP required' });
         }
 
-        const cleanEmail = target.trim().toLowerCase();
+        const cleanTarget = type === 'email' ? target.trim().toLowerCase() : target.trim();
 
-        const verified = await verifyOTP(cleanEmail, 'email', otp);
+        const verified = await verifyOTP(cleanTarget, type, otp);
 
         if (!verified) {
-            return res.status(400).json({
-                message: 'Invalid or expired OTP'
-            });
+            return res.status(400).json({ message: 'Invalid or expired OTP' });
         }
 
-        // 🔥 Mark email as verified in User model
-        await User.updateOne(
-            { email: cleanEmail },
-            { isEmailVerified: true }
-        );
-
-        res.json({
-            message: 'OTP verified successfully',
-            verified: true
-        });
+        res.json({ message: 'OTP verified successfully', verified: true });
 
     } catch (error) {
         console.error("VERIFY OTP ERROR:", error);
@@ -153,7 +143,8 @@ router.post('/register', async (req, res) => {
             password,
             gender,
             referredBy: referralCode ? parseInt(referralCode) : null,
-            isEmailVerified: true // since OTP verified before register
+            isEmailVerified: true,
+            isPhoneVerified: true
         });
 
         const token = jwt.sign(
@@ -178,8 +169,72 @@ router.post('/register', async (req, res) => {
 
 
 // ======================================
-// LOGIN
+// VERIFY FORGET DETAILS (Check UserID + Email + Phone + OTPs)
 // ======================================
+router.post('/verify-forget', async (req, res) => {
+    try {
+        const { userId, email, phone, emailOtp, phoneOtp } = req.body;
+
+        const user = await User.findOne({
+            userId: Number(userId),
+            email: email.trim().toLowerCase(),
+            phone: phone.trim()
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User details do not match our records' });
+        }
+
+        // Verify Email OTP only
+        const emailVerified = await verifyOTP(email.trim().toLowerCase(), 'email', emailOtp);
+
+        if (!emailVerified) {
+            return res.status(400).json({ message: 'Invalid or expired Email OTP' });
+        }
+
+        // Create a temporary verification token for reset (short-lived)
+        const resetToken = jwt.sign({ userId: user.userId, verified: true }, process.env.JWT_SECRET, { expiresIn: '15m' });
+
+        res.json({ message: 'Verified successfully', resetToken });
+
+    } catch (error) {
+        console.error("VERIFY FORGET ERROR:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// ======================================
+// RESET PASSWORD
+// ======================================
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { resetToken, newPassword, confirmPassword } = req.body;
+
+        if (!resetToken || !newPassword || newPassword !== confirmPassword) {
+            return res.status(400).json({ message: 'Invalid input or passwords do not match' });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters' });
+        }
+
+        const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+        if (!decoded.verified) return res.status(401).json({ message: 'Unauthorized' });
+
+        const user = await User.findOne({ userId: decoded.userId });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        user.password = newPassword;
+        await user.save();
+
+        res.json({ message: 'Password reset successful' });
+
+    } catch (error) {
+        res.status(401).json({ message: 'Link expired or invalid' });
+    }
+});
+
+
 // ======================================
 // LOGIN
 // ======================================
@@ -187,16 +242,11 @@ router.post('/login', async (req, res) => {
     try {
         const { userId, password } = req.body;
 
-        console.log("LOGIN INPUT:", userId, password);
-
         if (!userId || !password) {
-            return res.status(400).json({
-                message: 'User ID and password required'
-            });
+            return res.status(400).json({ message: 'User ID and password required' });
         }
 
         const loginInput = String(userId).trim();
-
         let user;
 
         if (loginInput.includes('@')) {
@@ -206,18 +256,11 @@ router.post('/login', async (req, res) => {
         }
 
         if (!user) {
-            console.log("❌ USER NOT FOUND");
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        console.log("DB PASSWORD HASH:", user.password);
-
         const isMatch = await user.matchPassword(password);
-
-        console.log("PASSWORD MATCH RESULT:", isMatch);
-
         if (!isMatch) {
-            console.log("❌ PASSWORD INCORRECT");
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
@@ -226,8 +269,6 @@ router.post('/login', async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
-
-        console.log("✅ LOGIN SUCCESS");
 
         res.json({
             token,
@@ -251,4 +292,5 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
+
 module.exports = router;

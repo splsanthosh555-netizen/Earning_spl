@@ -8,7 +8,7 @@ const counterSchema = new mongoose.Schema(
         },
         seq: {
             type: Number,
-            default: 1135840 // starting base (you can change this)
+            default: 1135481 // New specified start ID
         }
     },
     { versionKey: false }

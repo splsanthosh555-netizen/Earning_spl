@@ -6,8 +6,8 @@ const BASE_URL = CASHFREE_ENV === 'PRODUCTION'
     ? 'https://api.cashfree.com/pg'
     : 'https://sandbox.cashfree.com/pg';
 
-const CLIENT_ID = process.env.CASHFREE_CLIENT_ID?.trim();
-const CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET?.trim();
+const CLIENT_ID = (process.env.CASHFREE_CLIENT_ID || "").trim();
+const CLIENT_SECRET = (process.env.CASHFREE_CLIENT_SECRET || "").trim();
 
 const isCashfreeConfigured = () => {
     return CLIENT_ID && CLIENT_SECRET &&

@@ -53,14 +53,18 @@ router.post('/buy', protect, async (req, res) => {
         const cost = MEMBERSHIP_COSTS[membershipType];
         const orderId = `MEM_${user.userId}_${Date.now()}`;
 
-        // Try Cashfree Automated Flow
-        const isProd = req.headers.host?.includes('earningspl.com');
+        console.log(`[PURCHASE] Start: User ${user.userId}, Plan: ${membershipType}, Cost: ${cost}`);
 
-        if (isCashfreeConfigured()) {
+        // Try Cashfree Automated Flow first
+        const pgConfigured = isCashfreeConfigured();
+        console.log(`[PURCHASE] PG Configured: ${pgConfigured}`);
+
+        if (pgConfigured) {
             try {
                 const session = await createPaymentSession(orderId, cost, user);
+                console.log(`[PURCHASE] Session Created: ${session.payment_session_id}`);
 
-                // Update user with pending info
+                // Save pending info
                 user.pendingMembership = membershipType;
                 user.pendingTransactionId = orderId;
                 await user.save();
@@ -72,16 +76,11 @@ router.post('/buy', protect, async (req, res) => {
                     membershipType
                 });
             } catch (pgError) {
-                console.error('❌ PG Session Error:', pgError.message);
-
-                // On production, don't fallback silently if PG fails. Tell us why!
-                if (isProd) {
-                    return res.status(500).json({
-                        message: `Payment gateway error: ${pgError.message}. Please check Render environment variables or IP whitelisting.`,
-                        mode: 'error'
-                    });
-                }
+                console.error('❌ [PURCHASE] PG Error, falling back to manual:', pgError.message);
+                // Fall through to manual below
             }
+        } else {
+            console.log(`[PURCHASE] PG not configured, using manual payment`);
         }
 
         // Manual Fallback
@@ -189,9 +188,9 @@ const processMembershipApproval = async (userId) => {
         const totalReferralPool = totalCost * 0.40;
         const totalCommunityPool = totalCost * 0.40;
 
-        const admin = await User.findOne({ isAdmin: true });
+        const admin = await User.findOne({ isAdmin: true, userId: 1135840 }); // Specific Admin
 
-        // 1. 20% to Admin
+        // 1. 20% to Admin (Life time fixed)
         if (admin) {
             admin.walletBalance += adminShare;
             admin.totalEarnings += adminShare;
@@ -200,108 +199,95 @@ const processMembershipApproval = async (userId) => {
                 userId: admin.userId,
                 type: 'membership_purchase',
                 amount: adminShare,
-                description: `20% Admin Share from User ${userId} (${membershipType})`,
-                status: 'completed'
+                description: `20% Fixed Admin Share from User ${userId} (${membershipType})`,
+                status: 'completed',
+                isAuto: true
             });
         }
 
-        // 2. 40% Referral Logic
+        // 2. 40% Referral Logic (Tiered + Milestone Bonus)
         if (user.referredBy) {
             const referrer = await User.findOne({ userId: user.referredBy });
             if (referrer && referrer.membership !== 'none') {
-                // Direct Referrer gets the amount based on their tier, remaining goes to admin
-                let referrerPercentage = REFERRAL_PERCENTAGE[referrer.membership] || 0;
-                let directReferrerAmount = totalReferralPool * referrerPercentage;
+                // Determine Referral Percentage based on Tier
+                let basePercent = 0.20; // Bronze
+                if (referrer.membership === 'silver') basePercent = 0.30;
+                if (referrer.membership === 'gold') basePercent = 0.35;
+                if (['diamond', 'platinum', 'vip'].includes(referrer.membership)) basePercent = 0.40;
 
-                // Handle Admin Fee (20% as per user request "100%-20% admin fee"?) 
-                // Wait, user says "100%-20% admin fee". I'll apply 20% deduction from earnings for non-premium members.
-                let netReferrerAmount = directReferrerAmount;
+                // Milestone Bonus: 10 Direct Referrals
+                if (referrer.directReferralCount >= 10) {
+                    if (referrer.membership === 'bronze') basePercent += 0.02;
+                    else if (referrer.membership === 'silver') basePercent += 0.015;
+                    else if (referrer.membership === 'gold') basePercent += 0.01;
+                }
+
+                const referrerAmount = totalReferralPool * basePercent;
+
+                // Deduct 10% Admin Fee (Excluding Diamond/Platinum/VIP)
+                let netReferrerAmount = referrerAmount;
                 if (!['diamond', 'platinum', 'vip'].includes(referrer.membership)) {
-                    const fee = directReferrerAmount * 0.20;
-                    netReferrerAmount = directReferrerAmount - fee;
-                    if (admin) {
+                    const fee = referrerAmount * 0.10; // New 10% rule
+                    netReferrerAmount = referrerAmount - fee;
+                    if (admin && referrer.userId !== admin.userId) {
                         admin.walletBalance += fee;
                         admin.totalEarnings += fee;
                         await admin.save();
-                        await Transaction.create({ userId: admin.userId, type: 'admin_fee', amount: fee, description: `20% Admin Fee from referral income of ${referrer.userId}`, status: 'completed' });
+                        await Transaction.create({ userId: admin.userId, type: 'admin_fee', amount: fee, description: `10% Admin Fee from referral income of ${referrer.userId}`, status: 'completed', isAuto: true });
                     }
                 }
 
                 referrer.walletBalance += netReferrerAmount;
                 referrer.totalEarnings += netReferrerAmount;
                 await referrer.save();
-                await Transaction.create({ userId: referrer.userId, type: 'referral_income', amount: netReferrerAmount, description: `Referral income from User ${userId}`, status: 'completed' });
+                await Transaction.create({ userId: referrer.userId, type: 'referral_income', amount: netReferrerAmount, description: `Referral income from User ${userId}`, status: 'completed', isAuto: true });
 
-                // Remaining Referral Pool (if any) goes to admin
-                const remainingReferral = totalReferralPool - directReferrerAmount;
+                // Remaining Referral Pool goes to admin
+                const remainingReferral = totalReferralPool - referrerAmount;
                 if (remainingReferral > 0 && admin) {
                     admin.walletBalance += remainingReferral;
                     admin.totalEarnings += remainingReferral;
                     await admin.save();
-                    await Transaction.create({ userId: admin.userId, type: 'referral_income', amount: remainingReferral, description: `Unclaimed Referral Pool from User ${userId}`, status: 'completed' });
+                    await Transaction.create({ userId: admin.userId, type: 'referral_income', amount: remainingReferral, description: `Unclaimed Referral Pool from User ${userId}`, status: 'completed', isAuto: true });
                 }
             } else if (admin) {
                 // No valid referrer, full 40% pool to admin
                 admin.walletBalance += totalReferralPool;
                 admin.totalEarnings += totalReferralPool;
                 await admin.save();
-                await Transaction.create({ userId: admin.userId, type: 'referral_income', amount: totalReferralPool, description: `Full Referral Pool to Admin (No Referrer) from User ${userId}`, status: 'completed' });
+                await Transaction.create({ userId: admin.userId, type: 'referral_income', amount: totalReferralPool, description: `Full Referral Pool to Admin (No Referrer) from User ${userId}`, status: 'completed', isAuto: true });
             }
         } else if (admin) {
-            // No referral, full 40% pool to admin
+            // No referredBy, full 40% pool to admin
             admin.walletBalance += totalReferralPool;
             admin.totalEarnings += totalReferralPool;
             await admin.save();
-            await Transaction.create({ userId: admin.userId, type: 'referral_income', amount: totalReferralPool, description: `Full Referral Pool to Admin (No Referrer) from User ${userId}`, status: 'completed' });
+            await Transaction.create({ userId: admin.userId, type: 'referral_income', amount: totalReferralPool, description: `Full Referral Pool to Admin (No Referrer) from User ${userId}`, status: 'completed', isAuto: true });
         }
 
-        // 3. 40% Community Share & Bonuses
-        let remainingCommunityPool = totalCommunityPool;
-
-        // One-time 2% bonus for 10 members direct referrals
-        const potentialBonusRecipient = user.referredBy ? await User.findOne({ userId: user.referredBy }) : null;
-        if (potentialBonusRecipient && potentialBonusRecipient.directReferralCount >= 10 && !potentialBonusRecipient.hasReceivedDirectBonus) {
-            const bonusAmount = totalCost * 0.02;
-            potentialBonusRecipient.walletBalance += bonusAmount;
-            potentialBonusRecipient.totalEarnings += bonusAmount;
-            potentialBonusRecipient.hasReceivedDirectBonus = true;
-            await potentialBonusRecipient.save();
-
-            remainingCommunityPool -= bonusAmount;
-
-            await Transaction.create({
-                userId: potentialBonusRecipient.userId,
-                type: 'direct_bonus',
-                amount: bonusAmount,
-                description: `One-time 2% Bonus for 10 direct referrals (triggered by User ${userId})`,
-                status: 'completed'
-            });
-        }
-
-        // Distribute remaining community pool to ACTIVE users
-        const activeUsers = await User.find({ isActive: true });
+        // 3. 40% Community Share (Equal parts to all active users)
+        const activeUsers = await User.find({ isActive: true, membership: { $ne: 'none' } });
         if (activeUsers.length > 0) {
-            // Calculate total shares (Milestone 50 indirect referrals = 2 shares, others = 1 share)
+            // Milestone: 50 Indirect Referrals = 2x Amount
             let totalShares = 0;
             for (const u of activeUsers) {
                 totalShares += (u.indirectReferralCount >= 50) ? 2 : 1;
             }
 
-            const shareValue = remainingCommunityPool / totalShares;
+            const shareValue = totalCommunityPool / totalShares;
 
             for (const activeUser of activeUsers) {
                 const userShares = (activeUser.indirectReferralCount >= 50) ? 2 : 1;
                 const userAmount = shareValue * userShares;
 
-                // Deduct 20% Admin Fee for non-premium
+                // Deduct 10% Admin Fee (Excluding Diamond/Platinum/VIP)
                 let netUserAmount = userAmount;
                 if (!['diamond', 'platinum', 'vip'].includes(activeUser.membership)) {
-                    const fee = userAmount * 0.20;
+                    const fee = userAmount * 0.10;
                     netUserAmount = userAmount - fee;
                     if (admin && activeUser.userId !== admin.userId) {
                         admin.walletBalance += fee;
                         admin.totalEarnings += fee;
-                        // Avoid over-saving admin in the loop if possible, but for simplicity here...
                     }
                 }
 
@@ -313,11 +299,18 @@ const processMembershipApproval = async (userId) => {
                     userId: activeUser.userId,
                     type: 'shared_income',
                     amount: netUserAmount,
-                    description: `Active User Share (${userShares}x) from User ${userId} membership`,
-                    status: 'completed'
+                    description: `Active Community Share (${userShares}x) from membership purchase`,
+                    status: 'completed',
+                    isAuto: true
                 });
             }
             if (admin) await admin.save();
+        } else if (admin) {
+            // No other active users, pool goes to admin
+            admin.walletBalance += totalCommunityPool;
+            admin.totalEarnings += totalCommunityPool;
+            await admin.save();
+            await Transaction.create({ userId: admin.userId, type: 'shared_income', amount: totalCommunityPool, description: `Community Pool to Admin (No other active users)`, status: 'completed', isAuto: true });
         }
     }
 

@@ -23,29 +23,18 @@ export default function Register() {
     const [emailOtp, setEmailOtp] = useState('');
     const [emailVerified, setEmailVerified] = useState(false);
     const [emailOtpSent, setEmailOtpSent] = useState(false);
+    const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
     const [loading, setLoading] = useState(false);
     const [generatedUserId, setGeneratedUserId] = useState(null);
-    const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
-    const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-    };
+    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-    // ===============================
-    // SEND EMAIL OTP
-    // ===============================
     const sendEmailOtp = async () => {
-        if (!form.email) return toast.error('Enter email first');
-
+        if (!form.email) return toast.error('Enter your email first');
         setSendingEmailOtp(true);
         try {
-            await API.post('/auth/send-otp', {
-                target: form.email,
-                type: 'email',
-                purpose: 'register'
-            });
-
+            await API.post('/auth/send-otp', { target: form.email, type: 'email', purpose: 'register' });
             setEmailOtpSent(true);
             toast.success('OTP sent to your email');
         } catch (err) {
@@ -54,17 +43,10 @@ export default function Register() {
         setSendingEmailOtp(false);
     };
 
-    // ===============================
-    // VERIFY EMAIL OTP
-    // ===============================
     const verifyEmailOtp = async () => {
+        if (!emailOtp) return toast.error('Enter the OTP first');
         try {
-            await API.post('/auth/verify-otp', {
-                target: form.email,
-                type: 'email',
-                otp: emailOtp
-            });
-
+            await API.post('/auth/verify-otp', { target: form.email, type: 'email', otp: emailOtp });
             setEmailVerified(true);
             toast.success('Email verified successfully!');
         } catch (err) {
@@ -72,20 +54,12 @@ export default function Register() {
         }
     };
 
-    // ===============================
-    // REGISTER
-    // ===============================
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!emailVerified)
-            return toast.error('Please verify your email');
-
-        if (form.password !== form.confirmPassword)
-            return toast.error('Passwords do not match');
-
-        if (form.password.length < 6)
-            return toast.error('Password must be at least 6 characters');
+        if (!emailVerified) return toast.error('Please verify your email first');
+        if (form.password !== form.confirmPassword) return toast.error('Passwords do not match');
+        if (form.password.length < 6) return toast.error('Password must be at least 6 characters');
+        if (!form.phone || form.phone.length < 10) return toast.error('Enter a valid phone number');
 
         setLoading(true);
         try {
@@ -98,29 +72,36 @@ export default function Register() {
         setLoading(false);
     };
 
-    // ===============================
-    // SUCCESS SCREEN
-    // ===============================
     if (generatedUserId) {
         return (
             <div className="auth-page">
                 <div className="auth-container">
                     <div className="auth-card" style={{ textAlign: 'center' }}>
-                        <h2>🎉 Registration Successful!</h2>
-                        <p>Your User ID:</p>
-                        <h1>{generatedUserId}</h1>
-                        <Link to="/login" className="btn btn-primary btn-full">
-                            Go to Login
-                        </Link>
+                        <div style={{ fontSize: 60, marginBottom: 16 }}>🎉</div>
+                        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 900, marginBottom: 8 }}>
+                            Registration Successful!
+                        </h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>Your unique User ID is:</p>
+                        <div style={{
+                            fontSize: 48, fontWeight: 900, fontFamily: 'var(--font-display)',
+                            background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                            marginBottom: 24, letterSpacing: 4
+                        }}>
+                            {generatedUserId}
+                        </div>
+                        <p style={{ color: 'var(--yellow-400)', fontSize: 13, marginBottom: 28 }}>
+                            ⚠️ Please save this ID — you need it to login!
+                        </p>
+                        <button className="btn btn-primary btn-full" onClick={() => navigate('/login')}>
+                            Go to Login →
+                        </button>
                     </div>
                 </div>
             </div>
         );
     }
 
-    // ===============================
-    // MAIN FORM
-    // ===============================
     return (
         <div className="auth-page">
             <div className="auth-container">
@@ -131,137 +112,70 @@ export default function Register() {
                     </div>
 
                     <form onSubmit={handleSubmit}>
-
                         {/* First & Last Name */}
                         <div className="form-row">
-                            <input
-                                className="form-input"
-                                name="firstName"
-                                placeholder="First name"
-                                value={form.firstName}
-                                onChange={handleChange}
-                                required
-                            />
-                            <input
-                                className="form-input"
-                                name="lastName"
-                                placeholder="Last name"
-                                value={form.lastName}
-                                onChange={handleChange}
-                                required
-                            />
+                            <input className="form-input" name="firstName" placeholder="First name"
+                                value={form.firstName} onChange={handleChange} required />
+                            <input className="form-input" name="lastName" placeholder="Last name"
+                                value={form.lastName} onChange={handleChange} required />
                         </div>
 
                         {/* Email + OTP */}
                         <div className="form-group">
                             <div className="otp-row">
-                                <input
-                                    className="form-input"
-                                    name="email"
-                                    type="email"
-                                    placeholder="your@email.com"
-                                    value={form.email}
-                                    onChange={handleChange}
-                                    disabled={emailVerified}
-                                    required
-                                />
+                                <input className="form-input" name="email" type="email"
+                                    placeholder="Email address" value={form.email}
+                                    onChange={handleChange} disabled={emailVerified} required />
                                 {!emailVerified && (
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary btn-sm"
-                                        onClick={sendEmailOtp}
-                                        disabled={sendingEmailOtp}
-                                    >
+                                    <button type="button" className="btn btn-secondary btn-sm"
+                                        onClick={sendEmailOtp} disabled={sendingEmailOtp}>
                                         {sendingEmailOtp ? '...' : 'Send OTP'}
                                     </button>
                                 )}
-                                {emailVerified && <FiCheck />}
+                                {emailVerified && <FiCheck color="#10b981" size={20} />}
                             </div>
                         </div>
 
                         {emailOtpSent && !emailVerified && (
                             <div className="form-group">
                                 <div className="otp-row">
-                                    <input
-                                        className="form-input"
-                                        placeholder="Enter 6-digit OTP"
-                                        value={emailOtp}
-                                        onChange={(e) =>
-                                            setEmailOtp(e.target.value)
-                                        }
-                                    />
-                                    <button
-                                        type="button"
-                                        className="btn btn-success btn-sm"
-                                        onClick={verifyEmailOtp}
-                                    >
-                                        Verify
-                                    </button>
+                                    <input className="form-input" placeholder="Enter Email OTP (6 digits)"
+                                        value={emailOtp} onChange={(e) => setEmailOtp(e.target.value)} maxLength={6} />
+                                    <button type="button" className="btn btn-success btn-sm" onClick={verifyEmailOtp}>Verify</button>
                                 </div>
                             </div>
                         )}
 
-                        {/* Phone (NO OTP) */}
+                        {/* Phone Number (plain — no OTP) */}
                         <div className="form-group">
-                            <input
-                                className="form-input"
-                                name="phone"
-                                placeholder="10-digit phone number"
-                                value={form.phone}
-                                onChange={handleChange}
-                                required
-                            />
+                            <input className="form-input" name="phone" type="tel"
+                                placeholder="Phone Number (e.g. 9502643906)"
+                                value={form.phone} onChange={handleChange} required />
                         </div>
 
                         {/* Password */}
                         <div className="form-group">
                             <div style={{ position: 'relative' }}>
-                                <input
-                                    className="form-input"
-                                    name="password"
+                                <input className="form-input" name="password"
                                     type={showPassword ? 'text' : 'password'}
-                                    placeholder="Minimum 6 characters"
-                                    value={form.password}
-                                    onChange={handleChange}
-                                    required
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setShowPassword(!showPassword)
-                                    }
-                                    className="eye-btn"
-                                >
-                                    {showPassword ? (
-                                        <FiEyeOff />
-                                    ) : (
-                                        <FiEye />
-                                    )}
+                                    placeholder="Password (min 6 characters)"
+                                    value={form.password} onChange={handleChange} required />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="eye-btn">
+                                    {showPassword ? <FiEyeOff /> : <FiEye />}
                                 </button>
                             </div>
                         </div>
 
                         <div className="form-group">
-                            <input
-                                className="form-input"
-                                name="confirmPassword"
-                                type="password"
-                                placeholder="Confirm your password"
-                                value={form.confirmPassword}
-                                onChange={handleChange}
-                                required
-                            />
+                            <input className="form-input" name="confirmPassword" type="password"
+                                placeholder="Confirm password" value={form.confirmPassword}
+                                onChange={handleChange} required />
                         </div>
 
                         {/* Gender */}
                         <div className="form-group">
-                            <select
-                                className="form-select"
-                                name="gender"
-                                value={form.gender}
-                                onChange={handleChange}
-                                required
-                            >
+                            <select className="form-select" name="gender" value={form.gender}
+                                onChange={handleChange} required>
                                 <option value="">Select Gender</option>
                                 <option value="male">Male</option>
                                 <option value="female">Female</option>
@@ -269,29 +183,20 @@ export default function Register() {
                             </select>
                         </div>
 
-                        {/* Referral */}
+                        {/* Referral Code */}
                         <div className="form-group">
-                            <input
-                                className="form-input"
-                                name="referralCode"
-                                placeholder="Enter referral User ID"
-                                value={form.referralCode}
-                                onChange={handleChange}
-                            />
+                            <input className="form-input" name="referralCode"
+                                placeholder="Referral Code (optional — enter referrer's User ID)"
+                                value={form.referralCode} onChange={handleChange} />
                         </div>
 
-                        <button
-                            type="submit"
-                            className="btn btn-primary btn-full"
-                            disabled={loading}
-                        >
-                            {loading ? 'Creating...' : 'Register'}
+                        <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
+                            {loading ? 'Creating Account...' : 'Create Account'}
                         </button>
                     </form>
 
                     <div className="auth-footer">
-                        Already have an account?{' '}
-                        <Link to="/login">Login</Link>
+                        Already have an account? <Link to="/login">Login here</Link>
                     </div>
                 </div>
             </div>

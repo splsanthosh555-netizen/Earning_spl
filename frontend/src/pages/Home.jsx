@@ -126,40 +126,40 @@ export default function Home() {
     };
 
     return (
-        <div className="page-wrapper">
-            {/* HEADER */}
+        <div className="page-wrapper dashboard-theme">
+            {/* HEADER SECTION */}
             <header className="app-header">
                 <div className="header-left">
                     <div className="header-brand">SPL-EARNINGS</div>
                     <div className="header-welcome">Welcome, <strong>{user?.firstName} {user?.lastName}</strong></div>
-                    <div className="header-userid">User ID: {user?.userId}</div>
+                    <div className="header-userid">(USER ID: {user?.userId})</div>
                 </div>
                 <div className="header-right">
                     <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
-                        {menuOpen ? <FiX /> : <FiMenu />} Menu
+                        <FiMenu /> <span>MENU BAR</span>
                     </button>
                     {menuOpen && (
                         <div className="menu-dropdown">
                             <button className="menu-item" onClick={() => { navigate('/profile'); setMenuOpen(false); }}>
-                                <FiUser /> Profile
+                                <FiUser /> PROFILE
                             </button>
                             <button className="menu-item" onClick={() => { navigate('/change-password'); setMenuOpen(false); }}>
-                                <FiLock /> Change Password
+                                <FiLock /> CHANGE PASSWORD
                             </button>
                             <button className="menu-item" onClick={() => { navigate('/bank-details'); setMenuOpen(false); }}>
-                                <FiCreditCard /> Bank Details
+                                <FiCreditCard /> BANK DETAILS
                             </button>
                             <button className="menu-item" onClick={() => { navigate('/terms'); setMenuOpen(false); }}>
-                                <FiFileText /> Terms & Conditions
+                                <FiFileText /> TERMS & CONDITIONS
                             </button>
                             {user?.isAdmin && (
                                 <button className="menu-item" onClick={() => { navigate('/admin'); setMenuOpen(false); }}>
-                                    <FiActivity /> Admin Panel
+                                    <FiActivity /> ADMIN PANEL
                                 </button>
                             )}
                             <div className="menu-divider" />
                             <button className="menu-item" onClick={handleLogout} style={{ color: 'var(--red-400)' }}>
-                                <FiLogOut /> Logout
+                                <FiLogOut /> LOGOUT
                             </button>
                         </div>
                     )}
@@ -168,294 +168,174 @@ export default function Home() {
 
             {/* MIDDLE SECTION */}
             <div className="home-content">
-                <div className="home-grid">
+                <div className="stats-main-grid">
                     {/* Total Earnings */}
-                    <div className="stat-card" onClick={() => navigate('/earnings')} style={{ cursor: 'pointer' }}>
-                        <div className="stat-card-label">Total Earnings</div>
-                        <div className="stat-card-value purple">₹{(user?.totalEarnings || 0).toFixed(2)}</div>
+                    <div className="hero-stat-card" onClick={() => navigate('/earnings')}>
+                        <div className="hero-stat-label">TOTAL EARNINGS</div>
+                        <div className="hero-stat-value">₹{(user?.totalEarnings || 0).toFixed(2)}</div>
+                        <div className="hero-stat-sub">Click to view history</div>
                     </div>
 
-                    {/* Wallet Balance */}
-                    <div className="stat-card" style={{ cursor: 'default' }}>
-                        <div className="stat-card-label">👛 Wallet Balance</div>
-                        <div className="stat-card-value cyan">₹{(earnings?.walletBalance || user?.walletBalance || 0).toFixed(2)}</div>
+                    {/* Referral Link Card */}
+                    <div className="referral-box-card">
+                        <div className="ref-title"><FiLink /> REFERRAL CODE</div>
+                        <div className="ref-id-display">Your Code: <span>{user?.userId}</span></div>
+                        <div className="ref-link-actions">
+                            <button className="btn btn-secondary btn-sm" onClick={copyLink}><FiCopy /> Copy Link</button>
+                            <button className="btn btn-primary btn-sm" onClick={shareLink}><FiShare2 /> Share</button>
+                        </div>
                     </div>
+                </div>
 
-                    {/* Membership */}
-                    <div className="stat-card" onClick={() => navigate('/membership')} style={{ cursor: 'pointer' }}>
-                        <div className="stat-card-label">Membership</div>
-                        <div className="stat-card-value gold">{getMembershipLabel(user?.membership)}</div>
-                    </div>
-
+                <div className="home-action-grid">
                     {/* Direct Lines */}
-                    <div className="stat-card" onClick={openDirectLines}>
-                        <div className="stat-card-label">Direct Lines</div>
-                        <div className="stat-card-value cyan">{user?.directReferralCount || 0}</div>
+                    <div className="action-pill cyan" onClick={openDirectLines}>
+                        <div className="pill-icon"><FiUsers /></div>
+                        <div className="pill-content">
+                            <div className="pill-label">Direct lines</div>
+                            <div className="pill-value">{user?.directReferralCount || 0}</div>
+                        </div>
                     </div>
 
                     {/* Indirect Lines */}
-                    <div className="stat-card" onClick={openIndirectLines}>
-                        <div className="stat-card-label">Indirect Lines</div>
-                        <div className="stat-card-value green">{user?.indirectReferralCount || 0}</div>
+                    <div className="action-pill purple" onClick={openIndirectLines}>
+                        <div className="pill-icon"><FiTrendingUp /></div>
+                        <div className="pill-content">
+                            <div className="pill-label">Indirect lines</div>
+                            <div className="pill-value">{user?.indirectReferralCount || 0}</div>
+                        </div>
+                    </div>
+
+                    {/* Membership */}
+                    <div className="action-pill gold" onClick={() => navigate('/membership')}>
+                        <div className="pill-icon"><FiAward /></div>
+                        <div className="pill-content">
+                            <div className="pill-label">Membership</div>
+                            <div className="pill-value">{getMembershipLabel(user?.membership)}</div>
+                        </div>
                     </div>
                 </div>
 
-                {/* ========== WALLET & WITHDRAW SECTION ========== */}
-                <div className="wallet-withdraw-section" style={{
-                    background: 'linear-gradient(135deg, rgba(34,211,238,0.08), rgba(168,85,247,0.08))',
-                    border: '1px solid rgba(34,211,238,0.2)',
-                    borderRadius: 16,
-                    padding: '24px',
-                    marginBottom: 24
-                }}>
-                    <h3 style={{
-                        fontSize: 18, fontWeight: 800, marginBottom: 16,
-                        fontFamily: 'var(--font-display)',
-                        display: 'flex', alignItems: 'center', gap: 8
-                    }}>
-                        <FiDollarSign /> Wallet & Withdraw
-                    </h3>
-
-                    {/* Wallet Balance Display */}
-                    <div style={{
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: '16px 20px',
-                        marginBottom: 16, border: '1px solid rgba(255,255,255,0.06)'
-                    }}>
-                        <div>
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Available Balance</div>
-                            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--cyan-400)', fontFamily: 'var(--font-display)' }}>
-                                ₹{(earnings?.walletBalance || user?.walletBalance || 0).toFixed(2)}
-                            </div>
-                        </div>
-                        <button
-                            className="btn btn-primary btn-sm"
-                            onClick={() => navigate('/earnings')}
-                            style={{ whiteSpace: 'nowrap' }}
-                        >
-                            <FiTrendingUp /> View History
-                        </button>
+                {/* WALLET & WITHDRAW CONTROL */}
+                <div className="withdraw-control-panel">
+                    <div className="panel-header">
+                        <FiDollarSign /> Wallet Balance & Withdraw
                     </div>
-
-                    {/* Bank/UPI Details */}
-                    {bankDetails ? (
-                        <div style={{
-                            fontSize: 13, color: 'var(--cyan-400)', marginBottom: 16,
-                            background: 'rgba(34, 211, 238, 0.08)', padding: '12px 16px',
-                            borderRadius: 10, border: '1px solid rgba(34, 211, 238, 0.15)'
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>💳 Withdrawal Destination:</span>
-                                <button
-                                    onClick={() => navigate('/bank-details')}
-                                    style={{
-                                        background: 'none', border: 'none', color: 'var(--purple-400)',
-                                        fontSize: 11, cursor: 'pointer', textDecoration: 'underline'
-                                    }}
-                                >Edit Details</button>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                <div style={{ fontWeight: 600 }}>Bank: {bankDetails.bankName}</div>
-                                <div style={{ fontSize: 12, opacity: 0.8 }}>A/C: {bankDetails.accountNumber}</div>
-                                {bankDetails.upiId && (
-                                    <div style={{
-                                        marginTop: 4, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.1)',
-                                        color: 'var(--purple-400)', fontWeight: 600
-                                    }}>
-                                        UPI ID: {bankDetails.upiId}
-                                    </div>
-                                )}
-                            </div>
+                    <div className="panel-body">
+                        <div className="wallet-vitals">
+                            <div className="vital-label">Current Balance</div>
+                            <div className="vital-value">₹{(user?.walletBalance || 0).toFixed(2)}</div>
                         </div>
-                    ) : (
-                        <div style={{
-                            marginBottom: 16, padding: '14px 16px',
-                            background: 'rgba(239, 68, 68, 0.08)', borderRadius: 10,
-                            border: '1px solid rgba(239, 68, 68, 0.2)'
-                        }}>
-                            <p style={{ color: 'var(--red-400)', fontSize: 13, marginBottom: 6 }}>
-                                ⚠️ No payment details found
-                            </p>
-                            <Link to="/bank-details" style={{
-                                color: 'var(--cyan-400)', fontSize: 13, fontWeight: 600,
-                                textDecoration: 'underline'
-                            }}>
-                                Add Bank Account or UPI ID to enable withdrawal →
-                            </Link>
+
+                        <div className="withdraw-input-row">
+                            <input
+                                className="form-input"
+                                type="number"
+                                placeholder="Min ₹100"
+                                value={withdrawAmount}
+                                onChange={(e) => setWithdrawAmount(e.target.value)}
+                            />
+                            <button
+                                className="btn btn-success"
+                                onClick={handleWithdraw}
+                                disabled={withdrawLoading || user?.walletBalance < 100}
+                            >
+                                {withdrawLoading ? '...' : (user?.walletBalance >= 100 ? 'Withdraw' : 'Low Balance')}
+                            </button>
                         </div>
-                    )}
-
-                    {/* Withdraw Input */}
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                        <input
-                            className="form-input"
-                            type="number"
-                            placeholder="Enter amount (min ₹100)"
-                            value={withdrawAmount}
-                            onChange={(e) => setWithdrawAmount(e.target.value)}
-                            style={{ flex: 1 }}
-                            id="home-withdraw-amount"
-                        />
-                        <button
-                            className="btn btn-success"
-                            onClick={handleWithdraw}
-                            disabled={withdrawLoading || !bankDetails || !(earnings?.canWithdraw)}
-                            style={{ whiteSpace: 'nowrap', padding: '10px 20px' }}
-                            id="home-withdraw-btn"
-                        >
-                            {withdrawLoading ? '⏳ Processing...' : '💸 Withdraw'}
-                        </button>
-                    </div>
-
-                    {!(earnings?.canWithdraw) && (
-                        <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 8 }}>
-                            Minimum balance of ₹100 required to withdraw
-                        </p>
-                    )}
-
-                    {/* Recent Withdrawal Status */}
-                    {recentWithdrawals.length > 0 && (
-                        <div style={{ marginTop: 16 }}>
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600 }}>
-                                Recent Withdrawals:
-                            </div>
-                            {recentWithdrawals.map((t) => (
-                                <div key={t._id} style={{
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    padding: '8px 12px', borderRadius: 8,
-                                    background: 'rgba(0,0,0,0.2)', marginBottom: 6,
-                                    border: '1px solid rgba(255,255,255,0.04)'
-                                }}>
-                                    <div>
-                                        <span style={{ fontSize: 13, fontWeight: 600 }}>₹{t.amount.toFixed(2)}</span>
-                                        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>
-                                            {new Date(t.createdAt).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    <span style={{
-                                        fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
-                                        padding: '2px 8px', borderRadius: 4,
-                                        color: t.status === 'approved' || t.status === 'completed' ? 'var(--green-400)' :
-                                            t.status === 'pending' ? 'var(--yellow-400)' : 'var(--red-400)',
-                                        background: t.status === 'approved' || t.status === 'completed' ? 'rgba(74,222,128,0.1)' :
-                                            t.status === 'pending' ? 'rgba(250,204,21,0.1)' : 'rgba(248,113,113,0.1)'
-                                    }}>
-                                        {t.status}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Referral Code Section */}
-                <div className="referral-card">
-                    <div className="referral-header">
-                        <div className="referral-title"><FiLink /> Referral Code</div>
-                    </div>
-                    <div className="referral-userid">
-                        Your User ID: <span>{user?.userId}</span>
-                    </div>
-                    <div className="referral-link-box">
-                        <input className="referral-link-input" value={referralData?.referralLink || ''} readOnly />
-                        <button className="btn btn-secondary btn-sm" onClick={copyLink}><FiCopy /> Copy</button>
-                        <button className="btn btn-primary btn-sm" onClick={shareLink}><FiShare2 /> Share</button>
                     </div>
                 </div>
 
-                {/* BOTTOM DASHBOARD */}
-                <div className="dashboard-section">
-                    <div className="dashboard-title"><FiTrendingUp /> Dashboard</div>
+                {/* BOTTOM SECTION (DASHBOARD) */}
+                <div className="dashboard-grid-container">
+                    <h3 className="section-header">PLATFORM DASHBOARD</h3>
                     <div className="dashboard-grid">
-                        <div className="dash-card">
-                            <div className="dash-card-icon">💰</div>
-                            <div className="dash-card-value" style={{ color: 'var(--green-400)' }}>
-                                ₹{(dashData?.totalRevenue || user?.totalEarnings || 0).toFixed(2)}
-                            </div>
-                            <div className="dash-card-label">Total Revenue</div>
+                        <div className="dash-box">
+                            <div className="dash-icon"><FiDollarSign /></div>
+                            <div className="dash-label">Total revenue</div>
+                            <div className="dash-value">₹{(dashData?.totalRevenue || 0).toFixed(2)}</div>
                         </div>
-                        <div className="dash-card">
-                            <div className="dash-card-icon">👥</div>
-                            <div className="dash-card-value" style={{ color: 'var(--cyan-400)' }}>
-                                {dashData?.activeUsers || user?.directReferralCount || 0}
-                            </div>
-                            <div className="dash-card-label">Total Active Users</div>
+                        <div className="dash-box">
+                            <div className="dash-icon"><FiUserCheck /></div>
+                            <div className="dash-label">Total active users</div>
+                            <div className="dash-value">{dashData?.activeUsers || 0}</div>
                         </div>
-                        <div className="dash-card">
-                            <div className="dash-card-icon">🚫</div>
-                            <div className="dash-card-value" style={{ color: 'var(--red-400)' }}>
-                                {dashData?.inactiveUsers || 0}
-                            </div>
-                            <div className="dash-card-label">Total Inactive Users</div>
+                        <div className="dash-box">
+                            <div className="dash-icon"><FiUserX /></div>
+                            <div className="dash-label">Total inactive users</div>
+                            <div className="dash-value">{dashData?.inactiveUsers || 0}</div>
                         </div>
-                        <div className="dash-card">
-                            <div className="dash-card-icon">📅</div>
-                            <div className="dash-card-value" style={{ color: 'var(--purple-400)' }}>
-                                ₹{(dashData?.monthlyEarnings || 0).toFixed(2)}
-                            </div>
-                            <div className="dash-card-label">Monthly Earnings</div>
+                        <div className="dash-box">
+                            <div className="dash-icon"><FiCalendar /></div>
+                            <div className="dash-label">Total monthly earnings</div>
+                            <div className="dash-value">₹{(dashData?.monthlyEarnings || 0).toFixed(2)}</div>
                         </div>
-                        <div className="dash-card">
-                            <div className="dash-card-icon">📊</div>
-                            <div className="dash-card-value" style={{ color: 'var(--gold)' }}>
-                                ₹{(dashData?.weeklyEarnings || 0).toFixed(2)}
-                            </div>
-                            <div className="dash-card-label">Weekly Earnings</div>
+                        <div className="dash-box">
+                            <div className="dash-icon"><FiActivity /></div>
+                            <div className="dash-label">Total weekly earnings</div>
+                            <div className="dash-value">₹{(dashData?.weeklyEarnings || 0).toFixed(2)}</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* DIRECT LINES MODAL */}
+            {/* MINI PAGES (MODALS) */}
             {showDirect && (
-                <div className="modal-overlay" onClick={() => setShowDirect(false)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <div className="modal-title">Direct Lines</div>
-                            <button className="modal-close" onClick={() => setShowDirect(false)}>✕</button>
+                <div className="mini-page-overlay" onClick={() => setShowDirect(false)}>
+                    <div className="mini-page" onClick={(e) => e.stopPropagation()}>
+                        <div className="mini-page-header">
+                            <h4>Direct Referrals</h4>
+                            <button onClick={() => setShowDirect(false)}>✕</button>
                         </div>
-                        {directLines.length === 0 ? (
-                            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>No direct referrals yet</p>
-                        ) : (
-                            <ul className="lines-list">
-                                {directLines.map((u) => (
-                                    <li key={u.userId} className="lines-item">
-                                        <div>
-                                            <div className="lines-name">{u.firstName} {u.lastName}</div>
-                                        </div>
-                                        <div className="lines-id">{u.userId}</div>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+                        <div className="mini-page-body">
+                            {directLines.length === 0 ? <p className="empty-msg">No entries found</p> : (
+                                <table className="lines-table">
+                                    <thead>
+                                        <tr><th>User Name</th><th>User ID</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {directLines.map(u => (
+                                            <tr key={u.userId}>
+                                                <td>{u.firstName} {u.lastName}</td>
+                                                <td>{u.userId}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* INDIRECT LINES MODAL */}
             {showIndirect && (
-                <div className="modal-overlay" onClick={() => setShowIndirect(false)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <div className="modal-title">Indirect Lines</div>
-                            <button className="modal-close" onClick={() => setShowIndirect(false)}>✕</button>
+                <div className="mini-page-overlay" onClick={() => setShowIndirect(false)}>
+                    <div className="mini-page" onClick={(e) => e.stopPropagation()}>
+                        <div className="mini-page-header">
+                            <h4>Indirect Referrals</h4>
+                            <button onClick={() => setShowIndirect(false)}>✕</button>
                         </div>
-                        {indirectLines.length === 0 ? (
-                            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>No indirect referrals yet</p>
-                        ) : (
-                            <ul className="lines-list">
-                                {indirectLines.map((u, i) => (
-                                    <li key={i} className="lines-item">
-                                        <div>
-                                            <div className="lines-name">{u.firstName} {u.lastName}</div>
-                                            <div className="lines-upline">Upline: {u.uplineName} ({u.uplineId})</div>
-                                        </div>
-                                        <div className="lines-id">{u.userId}</div>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+                        <div className="mini-page-body">
+                            {indirectLines.length === 0 ? <p className="empty-msg">No entries found</p> : (
+                                <table className="lines-table">
+                                    <thead>
+                                        <tr><th>User Name</th><th>User ID</th><th>Upline ID</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {indirectLines.map((u, i) => (
+                                            <tr key={i}>
+                                                <td>
+                                                    <div className="u-name">{u.firstName} {u.lastName}</div>
+                                                    <div className="u-upline">{u.uplineName}</div>
+                                                </td>
+                                                <td>{u.userId}</td>
+                                                <td>{u.uplineId}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
