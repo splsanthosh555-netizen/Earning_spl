@@ -16,8 +16,13 @@ export default function AdminPanel() {
     const [activeUsers, setActiveUsers] = useState([]);
     const [inactiveUsers, setInactiveUsers] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [processingIds, setProcessingIds] = useState(new Set()); // per-card loading
     const [rejectNote, setRejectNote] = useState('');
     const [rejectTarget, setRejectTarget] = useState(null);
+
+    const isProcessing = (id) => processingIds.has(String(id));
+    const addProcessing = (id) => setProcessingIds(prev => new Set([...prev, String(id)]));
+    const removeProcessing = (id) => setProcessingIds(prev => { const s = new Set(prev); s.delete(String(id)); return s; });
 
     useEffect(() => { loadTabData(tab); }, [tab]);
 
@@ -52,40 +57,63 @@ export default function AdminPanel() {
     };
 
     const approveMembership = async (userId, action) => {
-        setLoading(true);
+        if (isProcessing(userId)) return;
+        addProcessing(userId);
         try {
             await API.post('/admin/approve-membership', { userId, action });
             toast.success(`Membership ${action === 'approve' ? 'approved ✅' : 'rejected ❌'} for User ${userId}`);
-            loadTabData('approvals');
+            // Optimistically remove from list
+            setApprovals(prev => ({
+                ...prev,
+                pendingMemberships: prev.pendingMemberships.filter(u => u.userId !== userId)
+            }));
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed');
+            const msg = err.response?.data?.message || 'Failed';
+            if (msg.toLowerCase().includes('already')) {
+                // Already processed — just refresh
+                loadTabData('approvals');
+            } else {
+                toast.error(msg);
+            }
         }
-        setLoading(false);
+        removeProcessing(userId);
     };
 
-    // Manual approval — no popup, just appove directly
+    // Manual approval — no popup, just approve directly
     const approveWithdrawal = async (transactionId, action) => {
+        if (isProcessing(transactionId)) return; // prevent double click
+
         if (action === 'reject' && !rejectNote) {
             setRejectTarget(transactionId);
             return;
         }
 
-        setLoading(true);
+        addProcessing(transactionId);
         try {
             await API.post('/admin/approve-withdrawal', {
                 transactionId,
                 action,
                 adminNote: rejectNote || 'Approved by admin',
-                mode: 'manual'  // always manual — no Cashfree payout confusion
+                mode: 'manual'
             });
-            toast.success(action === 'approve' ? '✅ Withdrawal approved! Wallet deducted.' : '❌ Withdrawal rejected.');
+            toast.success(action === 'approve' ? '✅ Withdrawal approved! Money deducted from wallet.' : '❌ Withdrawal rejected.');
             setRejectNote('');
             setRejectTarget(null);
-            loadTabData('approvals');
+            // Optimistically remove from list — no need to re-fetch
+            setApprovals(prev => ({
+                ...prev,
+                pendingWithdrawals: prev.pendingWithdrawals.filter(t => String(t._id) !== String(transactionId))
+            }));
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Action failed');
+            const msg = err.response?.data?.message || 'Action failed';
+            if (msg.toLowerCase().includes('already processed')) {
+                toast.success('Already processed — refreshing list.');
+                loadTabData('approvals'); // just refresh, no error
+            } else {
+                toast.error(msg);
+            }
         }
-        setLoading(false);
+        removeProcessing(transactionId);
     };
 
     const deactivateInactive = async () => {
@@ -228,10 +256,14 @@ export default function AdminPanel() {
                                                     <div className="l-txn">Txn Ref: {u.pendingTransactionId}</div>
                                                 </div>
                                                 <div className="l-actions">
-                                                    <button className="btn btn-success" onClick={() => approveMembership(u.userId, 'approve')} disabled={loading}>
-                                                        <FiCheckCircle /> APPROVE
+                                                    <button className="btn btn-success"
+                                                        onClick={() => approveMembership(u.userId, 'approve')}
+                                                        disabled={isProcessing(u.userId)}>
+                                                        <FiCheckCircle /> {isProcessing(u.userId) ? 'Processing...' : 'APPROVE'}
                                                     </button>
-                                                    <button className="btn btn-danger" onClick={() => approveMembership(u.userId, 'reject')} disabled={loading}>
+                                                    <button className="btn btn-danger"
+                                                        onClick={() => approveMembership(u.userId, 'reject')}
+                                                        disabled={isProcessing(u.userId)}>
                                                         <FiXCircle /> REJECT
                                                     </button>
                                                 </div>
@@ -289,10 +321,11 @@ export default function AdminPanel() {
                                                 <div className="l-actions">
                                                     <button className="btn btn-success"
                                                         onClick={() => approveWithdrawal(t._id, 'approve')}
-                                                        disabled={loading}>
-                                                        <FiCheckCircle /> APPROVE
+                                                        disabled={isProcessing(t._id)}>
+                                                        <FiCheckCircle />
+                                                        {isProcessing(t._id) ? 'Processing...' : 'APPROVE'}
                                                         <span style={{ display: 'block', fontSize: 10, fontWeight: 400 }}>
-                                                            (Manual)
+                                                            {isProcessing(t._id) ? '' : '(Send money first, then click)'}
                                                         </span>
                                                     </button>
                                                     <button className="btn btn-danger"
@@ -300,7 +333,7 @@ export default function AdminPanel() {
                                                             setRejectTarget(t._id);
                                                             setRejectNote('');
                                                         }}
-                                                        disabled={loading}>
+                                                        disabled={isProcessing(t._id)}>
                                                         <FiXCircle /> REJECT
                                                     </button>
                                                 </div>
