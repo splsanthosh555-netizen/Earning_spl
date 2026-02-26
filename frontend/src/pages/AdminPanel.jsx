@@ -8,15 +8,6 @@ import API from '../api/axios';
 export default function AdminPanel() {
     const { user } = useAuth();
     const navigate = useNavigate();
-
-    useEffect(() => {
-        // Enforce specific Admin ID access ONLY
-        if (!user || !user.isAdmin || user.userId !== 1135841) {
-            toast.error('Restricted Area: Access Denied');
-            navigate('/home');
-        }
-    }, [user, navigate]);
-
     const [tab, setTab] = useState('dashboard');
     const [dashData, setDashData] = useState(null);
     const [users, setUsers] = useState([]);
@@ -33,6 +24,13 @@ export default function AdminPanel() {
     const isProcessing = (id) => processingIds.has(String(id));
     const addProcessing = (id) => setProcessingIds(prev => new Set([...prev, String(id)]));
     const removeProcessing = (id) => setProcessingIds(prev => { const s = new Set(prev); s.delete(String(id)); return s; });
+
+    useEffect(() => {
+        if (!user || !user.isAdmin || String(user.userId) !== '1135841') {
+            navigate('/home');
+            toast.error('Access Denied: Restricted Area');
+        }
+    }, [user, navigate]);
 
     useEffect(() => { loadTabData(tab); }, [tab]);
 

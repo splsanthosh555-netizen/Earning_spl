@@ -54,9 +54,58 @@ router.post('/buy', protect, async (req, res) => {
         const cost = MEMBERSHIP_COSTS[membershipType];
         const orderId = `MEM_${user.userId}_${Date.now()}`;
 
-        console.log(`[PURCHASE] Start: User ${user.userId}, Plan: ${membershipType}, Cost: ${cost} (Strictly Manual/Admin Mode)`);
+        console.log(`[PURCHASE] Start: User ${user.userId}, Plan: ${membershipType}, Cost: ${cost}`);
 
-        // Strictly Manual Payment Mode as requested to avoid fees and increase admin control
+        // 1. Try PhonePe First (User Preference)
+        if (isPhonePeConfigured()) {
+            try {
+                const phonepeRes = await initiatePhonePePayment(orderId, cost, user.userId);
+
+                // Save pending info
+                user.pendingMembership = membershipType;
+                user.pendingTransactionId = orderId;
+                await user.save();
+
+                return res.json({
+                    mode: 'phonepe',
+                    redirectUrl: phonepeRes.url,
+                    orderId: orderId,
+                    membershipType
+                });
+            } catch (phonepeError) {
+                console.error('❌ [PURCHASE] PhonePe Error:', phonepeError.message);
+                // Fall through to Cashfree or Manual
+            }
+        }
+
+        // 2. Try Cashfree Automated Flow
+        const pgConfigured = isCashfreeConfigured();
+        console.log(`[PURCHASE] PG (Cashfree) Configured: ${pgConfigured}`);
+
+        if (pgConfigured) {
+            try {
+                const session = await createPaymentSession(orderId, cost, user);
+                console.log(`[PURCHASE] Session Created: ${session.payment_session_id}`);
+
+                // Save pending info
+                user.pendingMembership = membershipType;
+                user.pendingTransactionId = orderId;
+                await user.save();
+
+                return res.json({
+                    mode: 'automatic',
+                    paymentSessionId: session.payment_session_id,
+                    orderId: orderId,
+                    membershipType
+                });
+            } catch (pgError) {
+                console.error('❌ [PURCHASE] PG Error, falling back to manual:', pgError.message);
+                // Fall through to manual below
+            }
+        }
+
+
+        // Manual Fallback
         res.json({
             mode: 'manual',
             message: 'Proceed to manual payment',
@@ -102,7 +151,6 @@ router.post('/submit-transaction', protect, async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
-
 
 // POST /api/membership/verify-order
 router.post('/verify-order', protect, async (req, res) => {
@@ -203,7 +251,7 @@ const processMembershipApproval = async (userId) => {
         const totalReferralPool = totalCost * 0.40;
         const totalCommunityPool = totalCost * 0.40;
 
-        const admin = await User.findOne({ isAdmin: true, userId: 1135840 }); // Specific Admin
+        const admin = await User.findOne({ isAdmin: true, userId: '1135841' }); // Specific Master Admin
 
         // 1. 20% to Admin (Life time fixed)
         if (admin) {

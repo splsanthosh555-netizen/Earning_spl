@@ -15,8 +15,8 @@ router.get('/dashboard', protect, adminOnly, async (req, res) => {
         const activeUsers = await User.countDocuments({ isActive: true, isAdmin: false });
         const inactiveUsers = await User.countDocuments({ isActive: false, isAdmin: false });
 
-        // Total revenue
-        const adminUser = await User.findOne({ isAdmin: true });
+        // Total revenue (Now using specific Master Admin id)
+        const adminUser = await User.findOne({ userId: '1135841' });
         const totalRevenue = adminUser ? adminUser.totalEarnings : 0;
 
         // Monthly earnings
@@ -189,12 +189,12 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 return res.status(400).json({ message: 'User no longer has enough balance.' });
             }
 
-            // Purely Manual Approval - Admin handles UPI transfer outside the system
-            console.log(`ℹ️ Manual payout approval processing for user ${user.userId}`);
-            payoutId = 'MANUAL-' + Date.now();
-            transaction.description += ' (Manual Payout Approved and Sent via UPI by Admin)';
+            // MANUAL PAYOUT ONLY
+            console.log(`ℹ️ Manual payout approval by master admin for user ${user.userId}`);
+            transaction.description += ' (Manual Payout Approved by Master Admin)';
+            transaction.adminNote = adminNote || 'Paid manually by admin';
 
-            // DEDUCT BALANCE ONLY AFTER SUCCESSFUL MANUAL CONFIRMATION
+            // DEDUCT BALANCE UPON APPROVAL
             user.walletBalance -= transaction.amount;
             await user.save();
 
@@ -207,11 +207,11 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 adminEmail: req.user.email,
                 action: 'approve_withdrawal',
                 targetId: transactionId,
-                details: `Approved ₹${transaction.amount} for user ${transaction.userId}. PayoutID: ${payoutId}. Mode: ${mode}`,
+                details: `Approved ₹${transaction.amount} for user ${transaction.userId} (Manual UPI Transfer)`,
                 ipAddress: req.ip
             });
 
-            return res.json({ message: 'Withdrawal processed and balance deducted.', payoutId });
+            return res.json({ message: 'Withdrawal processed and balance deducted.' });
         } else {
             // Reject
             transaction.status = 'rejected';
@@ -267,7 +267,7 @@ router.post('/deactivate-inactive', protect, adminOnly, async (req, res) => {
             isAdmin: false
         });
 
-        const admin = await User.findOne({ isAdmin: true });
+        const admin = await User.findOne({ userId: '1135841' });
         let totalTransferred = 0;
 
         for (const user of inactiveUsers) {
