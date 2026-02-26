@@ -2,7 +2,6 @@ const express = require('express');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const { protect } = require('../middleware/auth');
-const { isCashfreeConfigured, createPaymentSession, verifyPayment } = require('../utils/cashfreePG');
 const { isPhonePeConfigured, initiatePhonePePayment, verifyPhonePePayment } = require('../utils/phonepePG');
 
 const router = express.Router();
@@ -56,33 +55,7 @@ router.post('/buy', protect, async (req, res) => {
 
         console.log(`[PURCHASE] Start: User ${user.userId}, Plan: ${membershipType}, Cost: ${cost}`);
 
-        // 1. Try Cashfree Automated Flow (POPUP/MODAL)
-        const pgConfigured = isCashfreeConfigured();
-        console.log(`[PURCHASE] Cashfree Configured: ${pgConfigured}`);
-
-        if (pgConfigured) {
-            try {
-                const session = await createPaymentSession(orderId, cost, user);
-                console.log(`[PURCHASE] Cashfree Session Created: ${session.payment_session_id}`);
-
-                // Save pending info
-                user.pendingMembership = membershipType;
-                user.pendingTransactionId = orderId;
-                await user.save();
-
-                return res.json({
-                    mode: 'automatic',
-                    paymentSessionId: session.payment_session_id,
-                    orderId: orderId,
-                    membershipType
-                });
-            } catch (pgError) {
-                console.error('❌ [PURCHASE] Cashfree Error:', pgError.message);
-                // Fall through to PhonePe
-            }
-        }
-
-        // 2. Try PhonePe Flow (REDIRECT)
+        // 1. Try PhonePe Flow (REDIRECT)
         if (isPhonePeConfigured()) {
             try {
                 const phonepeRes = await initiatePhonePePayment(orderId, cost, user.userId);
@@ -168,9 +141,6 @@ router.post('/verify-order', protect, async (req, res) => {
         // Check PhonePe status if configured
         if (isPhonePeConfigured()) {
             status = await verifyPhonePePayment(orderId);
-        } else {
-            // Default to Cashfree
-            status = await verifyPayment(orderId);
         }
 
         if (status === 'PAID') {

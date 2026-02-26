@@ -49,9 +49,7 @@ app.get('/api/env-check', (req, res) => {
         EMAIL_PASS: process.env.EMAIL_PASS ? 'SET' : 'MISSING',
         TWILIO_SID: process.env.TWILIO_ACCOUNT_SID ? 'SET' : 'MISSING',
         TWILIO_TOKEN: process.env.TWILIO_AUTH_TOKEN ? 'SET' : 'MISSING',
-        TWILIO_PHONE: process.env.TWILIO_PHONE_NUMBER ? 'SET' : 'MISSING',
-        CASHFREE_ID: process.env.CASHFREE_CLIENT_ID ? 'SET' : 'MISSING',
-        CASHFREE_SECRET: process.env.CASHFREE_CLIENT_SECRET ? 'SET' : 'MISSING'
+        TWILIO_PHONE: process.env.TWILIO_PHONE_NUMBER ? 'SET' : 'MISSING'
     });
 });
 

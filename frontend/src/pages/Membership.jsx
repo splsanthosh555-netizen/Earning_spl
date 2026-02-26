@@ -71,29 +71,14 @@ export default function Membership() {
     const [transactionId, setTransactionId] = useState('');
     const [paymentInfo, setPaymentInfo] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [cashfreeSDK, setCashfreeSDK] = useState(null);
 
-    // Check for order_id in URL (Cashfree redirect back)
+    // Check for orderId in URL (PhonePe redirect back)
     useEffect(() => {
-        const orderId = searchParams.get('order_id');
+        const orderId = searchParams.get('orderId');
         if (orderId) {
             verifyReturnedPayment(orderId);
         }
-    }, []);
-
-    // Initialize Cashfree SDK
-    useEffect(() => {
-        if (window.Cashfree) {
-            const isProd = window.location.hostname !== 'localhost';
-            const cf = new window.Cashfree({
-                mode: isProd ? 'production' : 'sandbox'
-            });
-            setCashfreeSDK(cf);
-            console.log(`✅ Cashfree SDK loaded in ${isProd ? 'PRODUCTION' : 'SANDBOX'} mode`);
-        } else {
-            console.warn('⚠️ Cashfree SDK not loaded – falling back to manual payment');
-        }
-    }, []);
+    }, [searchParams]);
 
     const verifyReturnedPayment = async (orderId) => {
         try {
@@ -113,38 +98,6 @@ export default function Membership() {
         setLoading(true);
         try {
             const res = await API.post('/membership/buy', { membershipType: type });
-
-            if (res.data.mode === 'automatic') {
-                if (cashfreeSDK) {
-                    // ✅ CASHFREE AUTOMATED CHECKOUT
-                    const checkoutOptions = {
-                        paymentSessionId: res.data.paymentSessionId,
-                        redirectTarget: '_modal',
-                    };
-
-                    cashfreeSDK.checkout(checkoutOptions).then(async (result) => {
-                        if (result.error) {
-                            console.error('Cashfree error:', result.error);
-                            toast.error('Payment failed: ' + result.error.message);
-                        } else if (result.paymentDetails) {
-                            toast.success('Payment completed! Verifying...');
-                            await verifyReturnedPayment(res.data.orderId);
-                        }
-                    });
-                } else {
-                    console.warn('⚠️ Cashfree SDK not ready, falling back to manual');
-                    toast.error('Automated checkout not ready. Showing manual payment.');
-                    setSelectedType(type);
-                    setPaymentInfo({
-                        upiId: '1135841@ybl',
-                        amount: cost,
-                        note: `SPL_${type}_${user.userId}`
-                    });
-                    setShowPayment(true);
-                }
-                setLoading(false);
-                return;
-            }
 
             if (res.data.mode === 'phonepe' && res.data.redirectUrl) {
                 // ✅ PHONEPE REDIRECT FLOW

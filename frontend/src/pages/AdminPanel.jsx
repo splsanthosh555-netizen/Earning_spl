@@ -90,8 +90,8 @@ export default function AdminPanel() {
         removeProcessing(userId);
     };
 
-    // Manual or Auto approval
-    const approveWithdrawal = async (transactionId, action, mode = 'manual') => {
+    // Manual approval — just approve directly
+    const approveWithdrawal = async (transactionId, action) => {
         if (isProcessing(transactionId)) return; // prevent double click
 
         if (action === 'reject' && !rejectNote) {
@@ -107,18 +107,14 @@ export default function AdminPanel() {
 
         addProcessing(transactionId);
         try {
-            const res = await API.post('/admin/approve-withdrawal', {
+            await API.post('/admin/approve-withdrawal', {
                 transactionId,
                 action,
-                adminNote: rejectNote || (mode === 'auto' ? 'Sent via Cashfree Auto-Payout' : 'Paid manually by admin'),
-                mode: mode // 'auto' or 'manual'
+                adminNote: rejectNote || 'Approved by master admin'
             });
 
             if (action === 'approve') {
-                const successMsg = mode === 'auto'
-                    ? `🎉 Auto-Payout Successful! ID: ${res.data.payoutId}`
-                    : '✅ Manual Approval Success! Wallet balance deducted.';
-                toast.success(successMsg, { duration: 5000 });
+                toast.success('✅ Withdrawal approved and balance deducted.');
             } else {
                 toast.success('❌ Withdrawal rejected.');
             }
@@ -345,23 +341,15 @@ export default function AdminPanel() {
                                                         Requested: {new Date(t.createdAt).toLocaleString('en-IN')}
                                                     </div>
                                                 </div>
-                                                <div className="l-actions" style={{ gap: 12 }}>
-                                                    <button className="btn btn-primary"
-                                                        onClick={() => approveWithdrawal(t._id, 'approve', 'auto')}
-                                                        disabled={isProcessing(t._id)}
-                                                        style={{ padding: '8px 12px' }}>
-                                                        <span style={{ display: 'block', fontWeight: 900 }}>🚀 APPROVE (AUTO)</span>
-                                                        <span style={{ fontSize: 9 }}>Instant Cashfree Transfer</span>
-                                                    </button>
-
+                                                <div className="l-actions">
                                                     <button className="btn btn-success"
-                                                        onClick={() => approveWithdrawal(t._id, 'approve', 'manual')}
-                                                        disabled={isProcessing(t._id)}
-                                                        style={{ padding: '8px 12px' }}>
-                                                        <span style={{ display: 'block', fontWeight: 900 }}>✅ APPROVE (MANUAL)</span>
-                                                        <span style={{ fontSize: 9 }}>Paid via PhonePe / GPay</span>
+                                                        onClick={() => approveWithdrawal(t._id, 'approve')}
+                                                        disabled={isProcessing(t._id)}>
+                                                        ✅ APPROVE
+                                                        <span style={{ display: 'block', fontSize: 10, fontWeight: 400 }}>
+                                                            (Click after sending UPI/Bank transfer)
+                                                        </span>
                                                     </button>
-
                                                     <button className="btn btn-danger"
                                                         onClick={() => {
                                                             setRejectTarget(t._id);
