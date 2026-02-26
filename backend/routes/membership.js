@@ -110,7 +110,7 @@ router.post('/buy', protect, async (req, res) => {
         return res.json({
             mode: 'manual',
             paymentInfo: {
-                upiId: '1135841@ybl',
+                upiId: '9502643906-2@axl',
                 amount: cost,
                 note: `SPL_${membershipType}_${user.userId}`
             },
