@@ -40,8 +40,9 @@ const protect = async (req, res, next) => {
 // ADMIN ONLY
 // ===============================
 const adminOnly = (req, res, next) => {
-    if (!req.user || !req.user.isAdmin) {
-        return res.status(403).json({ message: 'Admin access only' });
+    // Strictly ONLY User ID 1135841 can access admin routes
+    if (!req.user || !req.user.isAdmin || req.user.userId !== 1135841) {
+        return res.status(403).json({ message: 'Access Denied: Restricted Admin Access' });
     }
     next();
 };

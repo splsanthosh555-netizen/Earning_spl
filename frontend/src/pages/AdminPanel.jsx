@@ -8,6 +8,15 @@ import API from '../api/axios';
 export default function AdminPanel() {
     const { user } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        // Enforce specific Admin ID access ONLY
+        if (!user || !user.isAdmin || user.userId !== 1135841) {
+            toast.error('Restricted Area: Access Denied');
+            navigate('/home');
+        }
+    }, [user, navigate]);
+
     const [tab, setTab] = useState('dashboard');
     const [dashData, setDashData] = useState(null);
     const [users, setUsers] = useState([]);
