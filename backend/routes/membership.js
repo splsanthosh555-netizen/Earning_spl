@@ -56,10 +56,37 @@ router.post('/buy', protect, async (req, res) => {
 
         console.log(`[PURCHASE] Start: User ${user.userId}, Plan: ${membershipType}, Cost: ${cost}`);
 
-        // 1. Try PhonePe First (User Preference)
+        // 1. Try Cashfree Automated Flow (POPUP/MODAL)
+        const pgConfigured = isCashfreeConfigured();
+        console.log(`[PURCHASE] Cashfree Configured: ${pgConfigured}`);
+
+        if (pgConfigured) {
+            try {
+                const session = await createPaymentSession(orderId, cost, user);
+                console.log(`[PURCHASE] Cashfree Session Created: ${session.payment_session_id}`);
+
+                // Save pending info
+                user.pendingMembership = membershipType;
+                user.pendingTransactionId = orderId;
+                await user.save();
+
+                return res.json({
+                    mode: 'automatic',
+                    paymentSessionId: session.payment_session_id,
+                    orderId: orderId,
+                    membershipType
+                });
+            } catch (pgError) {
+                console.error('❌ [PURCHASE] Cashfree Error:', pgError.message);
+                // Fall through to PhonePe
+            }
+        }
+
+        // 2. Try PhonePe Flow (REDIRECT)
         if (isPhonePeConfigured()) {
             try {
                 const phonepeRes = await initiatePhonePePayment(orderId, cost, user.userId);
+                console.log(`[PURCHASE] PhonePe Initiated for Order: ${orderId}`);
 
                 // Save pending info
                 user.pendingMembership = membershipType;
@@ -74,51 +101,25 @@ router.post('/buy', protect, async (req, res) => {
                 });
             } catch (phonepeError) {
                 console.error('❌ [PURCHASE] PhonePe Error:', phonepeError.message);
-                // Fall through to Cashfree or Manual
+                // Fall through to Manual
             }
         }
 
-        // 2. Try Cashfree Automated Flow
-        const pgConfigured = isCashfreeConfigured();
-        console.log(`[PURCHASE] PG (Cashfree) Configured: ${pgConfigured}`);
-
-        if (pgConfigured) {
-            try {
-                const session = await createPaymentSession(orderId, cost, user);
-                console.log(`[PURCHASE] Session Created: ${session.payment_session_id}`);
-
-                // Save pending info
-                user.pendingMembership = membershipType;
-                user.pendingTransactionId = orderId;
-                await user.save();
-
-                return res.json({
-                    mode: 'automatic',
-                    paymentSessionId: session.payment_session_id,
-                    orderId: orderId,
-                    membershipType
-                });
-            } catch (pgError) {
-                console.error('❌ [PURCHASE] PG Error, falling back to manual:', pgError.message);
-                // Fall through to manual below
-            }
-        }
-
-
-        // Manual Fallback
-        res.json({
+        // 3. Manual Fallback (QR CODE)
+        console.log(`[PURCHASE] Falling back to manual mode for User ${user.userId}`);
+        return res.json({
             mode: 'manual',
-            message: 'Proceed to manual payment',
-            membershipType,
-            cost,
-            orderId,
             paymentInfo: {
-                upiId: '9502643906-2@axl',
+                upiId: '1135841@ybl',
                 amount: cost,
-                note: `M-${membershipType}-${user.userId}`
-            }
+                note: `SPL_${membershipType}_${user.userId}`
+            },
+            orderId: orderId,
+            membershipType,
+            message: 'Proceed to manual payment'
         });
     } catch (error) {
+        console.error('❌ Buy Membership Error:', error.message);
         res.status(500).json({ message: error.message });
     }
 });

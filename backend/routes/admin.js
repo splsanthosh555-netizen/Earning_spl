@@ -189,12 +189,33 @@ router.post('/approve-withdrawal', protect, adminOnly, async (req, res) => {
                 return res.status(400).json({ message: 'User no longer has enough balance.' });
             }
 
-            // MANUAL PAYOUT ONLY
-            console.log(`ℹ️ Manual payout approval by master admin for user ${user.userId}`);
-            transaction.description += ' (Manual Payout Approved by Master Admin)';
-            transaction.adminNote = adminNote || 'Paid manually by admin';
+            const { isCashfreeConfigured, createCashfreePayout } = require('../utils/cashfreePayout');
+            let payoutId = 'MANUAL';
+            let payoutMode = 'manual';
 
-            // DEDUCT BALANCE UPON APPROVAL
+            // Try Automatic Payout
+            if (mode === 'auto' && isCashfreeConfigured()) {
+                try {
+                    const payout = await createCashfreePayout(user, bankDetails, transaction.amount);
+                    payoutId = payout.id;
+                    payoutMode = 'auto';
+                    transaction.description += ` (Auto Payout: ${payoutId})`;
+                    console.log(`✅ Auto payout success: ${payoutId}`);
+                } catch (payoutError) {
+                    const errorMsg = payoutError.response?.data?.message || payoutError.message;
+                    console.error('❌ Automated Payout Failed, falling back to manual:', errorMsg);
+                    // Fall back to manual instead of returning error
+                    payoutMode = 'manual';
+                    transaction.description += ` (Auto Payout Failed: ${errorMsg} — Manually Approved)`;
+                }
+            } else {
+                // Manual mode requested or Cashfree not configured
+                console.log(`ℹ️ Manual payout approval by master admin for user ${user.userId}`);
+                transaction.description += ' (Manual Payout Approved by Master Admin)';
+                transaction.adminNote = adminNote || 'Paid manually by admin';
+            }
+
+            // DEDUCT BALANCE UPON SUCCESSFUL PAYOUT OR MANUAL CONFIRMATION
             user.walletBalance -= transaction.amount;
             await user.save();
 

@@ -90,8 +90,8 @@ export default function AdminPanel() {
         removeProcessing(userId);
     };
 
-    // Manual approval — no popup, just approve directly
-    const approveWithdrawal = async (transactionId, action) => {
+    // Manual or Auto approval
+    const approveWithdrawal = async (transactionId, action, mode = 'manual') => {
         if (isProcessing(transactionId)) return; // prevent double click
 
         if (action === 'reject' && !rejectNote) {
@@ -99,15 +99,30 @@ export default function AdminPanel() {
             return;
         }
 
+        // Security check
+        if (String(user?.userId) !== '1135841') {
+            toast.error('Unauthorized');
+            return;
+        }
+
         addProcessing(transactionId);
         try {
-            await API.post('/admin/approve-withdrawal', {
+            const res = await API.post('/admin/approve-withdrawal', {
                 transactionId,
                 action,
-                adminNote: rejectNote || 'Approved by admin',
-                mode: 'manual'
+                adminNote: rejectNote || (mode === 'auto' ? 'Sent via Cashfree Auto-Payout' : 'Paid manually by admin'),
+                mode: mode // 'auto' or 'manual'
             });
-            toast.success(action === 'approve' ? '✅ Withdrawal approved! Money deducted from wallet.' : '❌ Withdrawal rejected.');
+
+            if (action === 'approve') {
+                const successMsg = mode === 'auto'
+                    ? `🎉 Auto-Payout Successful! ID: ${res.data.payoutId}`
+                    : '✅ Manual Approval Success! Wallet balance deducted.';
+                toast.success(successMsg, { duration: 5000 });
+            } else {
+                toast.success('❌ Withdrawal rejected.');
+            }
+
             setRejectNote('');
             setRejectTarget(null);
             // Optimistically remove from list — no need to re-fetch
@@ -330,16 +345,23 @@ export default function AdminPanel() {
                                                         Requested: {new Date(t.createdAt).toLocaleString('en-IN')}
                                                     </div>
                                                 </div>
-                                                <div className="l-actions">
-                                                    <button className="btn btn-success"
-                                                        onClick={() => approveWithdrawal(t._id, 'approve')}
-                                                        disabled={isProcessing(t._id)}>
-                                                        <FiCheckCircle />
-                                                        {isProcessing(t._id) ? 'Processing...' : 'APPROVE'}
-                                                        <span style={{ display: 'block', fontSize: 10, fontWeight: 400 }}>
-                                                            {isProcessing(t._id) ? '' : '(Send money first, then click)'}
-                                                        </span>
+                                                <div className="l-actions" style={{ gap: 12 }}>
+                                                    <button className="btn btn-primary"
+                                                        onClick={() => approveWithdrawal(t._id, 'approve', 'auto')}
+                                                        disabled={isProcessing(t._id)}
+                                                        style={{ padding: '8px 12px' }}>
+                                                        <span style={{ display: 'block', fontWeight: 900 }}>🚀 APPROVE (AUTO)</span>
+                                                        <span style={{ fontSize: 9 }}>Instant Cashfree Transfer</span>
                                                     </button>
+
+                                                    <button className="btn btn-success"
+                                                        onClick={() => approveWithdrawal(t._id, 'approve', 'manual')}
+                                                        disabled={isProcessing(t._id)}
+                                                        style={{ padding: '8px 12px' }}>
+                                                        <span style={{ display: 'block', fontWeight: 900 }}>✅ APPROVE (MANUAL)</span>
+                                                        <span style={{ fontSize: 9 }}>Paid via PhonePe / GPay</span>
+                                                    </button>
+
                                                     <button className="btn btn-danger"
                                                         onClick={() => {
                                                             setRejectTarget(t._id);

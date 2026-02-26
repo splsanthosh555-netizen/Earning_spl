@@ -114,29 +114,45 @@ export default function Membership() {
         try {
             const res = await API.post('/membership/buy', { membershipType: type });
 
+            if (res.data.mode === 'automatic') {
+                if (cashfreeSDK) {
+                    // ✅ CASHFREE AUTOMATED CHECKOUT
+                    const checkoutOptions = {
+                        paymentSessionId: res.data.paymentSessionId,
+                        redirectTarget: '_modal',
+                    };
+
+                    cashfreeSDK.checkout(checkoutOptions).then(async (result) => {
+                        if (result.error) {
+                            console.error('Cashfree error:', result.error);
+                            toast.error('Payment failed: ' + result.error.message);
+                        } else if (result.paymentDetails) {
+                            toast.success('Payment completed! Verifying...');
+                            await verifyReturnedPayment(res.data.orderId);
+                        }
+                    });
+                } else {
+                    console.warn('⚠️ Cashfree SDK not ready, falling back to manual');
+                    toast.error('Automated checkout not ready. Showing manual payment.');
+                    setSelectedType(type);
+                    setPaymentInfo({
+                        upiId: '1135841@ybl',
+                        amount: cost,
+                        note: `SPL_${type}_${user.userId}`
+                    });
+                    setShowPayment(true);
+                }
+                setLoading(false);
+                return;
+            }
+
             if (res.data.mode === 'phonepe' && res.data.redirectUrl) {
                 // ✅ PHONEPE REDIRECT FLOW
                 window.location.href = res.data.redirectUrl;
                 return;
             }
 
-            if (res.data.mode === 'automatic' && cashfreeSDK) {
-                // ✅ CASHFREE AUTOMATED CHECKOUT
-                const checkoutOptions = {
-                    paymentSessionId: res.data.paymentSessionId,
-                    redirectTarget: '_modal',
-                };
-
-                cashfreeSDK.checkout(checkoutOptions).then(async (result) => {
-                    if (result.error) {
-                        console.error('Cashfree error:', result.error);
-                        toast.error('Payment failed: ' + result.error.message);
-                    } else if (result.paymentDetails) {
-                        toast.success('Payment completed! Verifying...');
-                        await verifyReturnedPayment(res.data.orderId);
-                    }
-                });
-            } else if (res.data.mode === 'manual') {
+            if (res.data.mode === 'manual') {
                 // 💳 MANUAL UPI FALLBACK
                 setSelectedType(type);
                 setPaymentInfo(res.data.paymentInfo);

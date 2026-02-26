@@ -6,13 +6,19 @@ const BASE_URL = CASHFREE_ENV === 'PRODUCTION'
     ? 'https://api.cashfree.com/pg'
     : 'https://sandbox.cashfree.com/pg';
 
-const CLIENT_ID = (process.env.CASHFREE_CLIENT_ID || "").trim();
-const CLIENT_SECRET = (process.env.CASHFREE_CLIENT_SECRET || "").trim();
+const getClientConfig = () => {
+    return {
+        id: (process.env.CASHFREE_CLIENT_ID || "").trim(),
+        secret: (process.env.CASHFREE_CLIENT_SECRET || "").trim(),
+        env: process.env.CASHFREE_ENV || 'TEST'
+    };
+};
 
 const isCashfreeConfigured = () => {
-    return CLIENT_ID && CLIENT_SECRET &&
-        CLIENT_ID !== 'placeholder' &&
-        !CLIENT_ID.includes('placeholder');
+    const { id, secret } = getClientConfig();
+    const isConfigured = !!(id && secret && id !== 'placeholder' && !id.includes('placeholder'));
+    console.log(`[DEBUG] Cashfree Config Check: ID=${id ? 'SET' : 'MISSING'}, Secret=${secret ? 'SET' : 'MISSING'}, Configured=${isConfigured}`);
+    return isConfigured;
 };
 
 /**
@@ -38,11 +44,12 @@ const createPaymentSession = async (orderId, amount, user) => {
         }
     };
 
+    const { id, secret } = getClientConfig();
     try {
         const response = await axios.post(`${BASE_URL}/orders`, payload, {
             headers: {
-                'x-client-id': CLIENT_ID,
-                'x-client-secret': CLIENT_SECRET,
+                'x-client-id': id,
+                'x-client-secret': secret,
                 'x-api-version': '2023-08-01',
                 'Content-Type': 'application/json'
             }
@@ -59,11 +66,12 @@ const createPaymentSession = async (orderId, amount, user) => {
  * Verify Payment Status
  */
 const verifyPayment = async (orderId) => {
+    const { id, secret } = getClientConfig();
     try {
         const response = await axios.get(`${BASE_URL}/orders/${orderId}`, {
             headers: {
-                'x-client-id': CLIENT_ID,
-                'x-client-secret': CLIENT_SECRET,
+                'x-client-id': id,
+                'x-client-secret': secret,
                 'x-api-version': '2023-08-01'
             }
         });
