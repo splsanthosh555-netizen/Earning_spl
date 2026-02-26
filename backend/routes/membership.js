@@ -9,7 +9,7 @@ const router = express.Router();
 
 // Membership costs
 const MEMBERSHIP_COSTS = {
-    bronze: 1, // Temporarily ₹1 for LIVE TEST
+    bronze: 50,
     silver: 100,
     gold: 200,
     diamond: 350,
